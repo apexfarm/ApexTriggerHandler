@@ -114,7 +114,7 @@ trigger AccountTrigger on Account (before update, after update) {
 
 | Property/Method     | Description                                                  |
 | ------------------- | ------------------------------------------------------------ |
-| context.triggerProp | A read-only instance exposes every properties on `Trigger` context, i.e. <br/>   - `Trigger.new` => `context.triggerProp.newList`<br/>   - `Trigger.old` => `context.triggerProp.oldList` |
+| context.triggerProp | A read-only instance exposes every properties on `Trigger` context, i.e. <br/>   - `Trigger.new` => `context.triggerProp.newList`<br/>   - `Trigger.old` => `context.triggerProp.oldList`<br/>   - `Trigger.isUpdate` => `context.triggerProp.isUpdate`<br/>   - `Trigger.isBefore` => `context.triggerProp.isBefore` |
 | context.state       | A `Map<String, Object>` provided for developers to pass any value down to other handlers. |
 | context.next()      | Call the next handler.                                       |
 | context.stop()      | Stop execute any following handlers. A bit like the the stop in process builders. |

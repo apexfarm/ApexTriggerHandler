@@ -1,5 +1,6 @@
 @IsTest
 private with sharing class TriggersTest {
+
     // #region Test Handler Impls
     class FirstHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
@@ -59,6 +60,47 @@ private with sharing class TriggersTest {
             context.state.put('counter', (Integer)context.state.get('counter') + 1);
             context.next();
             context.state.put('counter', (Integer)context.state.get('counter') + 1);
+        }
+
+        public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void afterInsert(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void beforeUpdate(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void afterUpdate(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void beforeDelete(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void afterDelete(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void afterUndelete(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+    }
+
+    class StopHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
+        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
+        Triggers.AfterUndelete {
+        public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+            context.next(); // shouldn't work in when method
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context, Triggers.Helper helper) {
+            context.stop();
         }
 
         public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
@@ -164,6 +206,30 @@ private with sharing class TriggersTest {
             .afterUndelete()
                 .bind(new TestHandler())
             .execute();
+    }
+
+    @IsTest
+    static void testBinding_Stop_BeforeInsert() {
+        Triggers triggers = Triggers.prepare();
+        triggers.context.triggerProp.isBefore = true;
+        triggers.context.triggerProp.isAfter = false;
+        triggers.context.triggerProp.isInsert = true;
+        triggers.context.triggerProp.isUpdate = false;
+        triggers.context.triggerProp.isDelete = false;
+        triggers.context.triggerProp.isUndelete = false;
+        triggers.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
+
+        triggers
+            .beforeInsert()
+                .bind(new FirstHandler())
+                .bind(new TestHandler())
+                .bind(new TestHandler())
+                .bind(new StopHandler())
+                .bind(new TestHandler())
+                .bind(new LastHandler())
+        .execute();
+
+        System.assertEquals(4, triggers.context.state.get('counter'));
     }
 
     // #region Test State

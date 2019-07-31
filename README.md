@@ -2,11 +2,25 @@
 
 ![](https://img.shields.io/badge/version-1.0.0-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
 
-This is another library to implement the Apex trigger handler design pattern. There are already many handler libraries out there, but this one has some different approaches or advantanges as explained in the following comments:
+There are already many trigger handler libraries out there, but this one has some different approaches or advantanges such as state sharing, built in helper methods etc.. Just one class `Triggers.cls` with its corresponding test class `TriggersTest.cls`, and its minimal and simple.
+
+## Features
+
+1. In favour of interface implementation over the base class extension.
+2. Enable sharing state across different handlers easily.
+3. Built-in helper to perform operations with Trigger.new or Trigger.old.
+
+## Usage
+
+To create a trigger handler, you will need to create a class implementing the `Triggers.Handler` interface, and the corresponding trigger event interface you want to the handler to handle.
+
+```java
+class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate { ... }
+```
 
 #### Trigger Handler Example
 
-```c#
+```java
 // 1. Use interfaces instead of a base class to extend a custom handler. With interface 
 // approach we can declare only the needed interfaces explicitly, which is much cleaner 
 // and clearer.
@@ -41,31 +55,72 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Trigg
               context.state.put('counter', 0);
           }
           
-          // 6. Call context.next() to execute the next handler. This is optional, but
-          // useful when need to wrap up something after the next handler finishes.
+          // 6. Call context.next() to execute the next handler. This is required for
+          // every following handlers if need to wrap up something after all the 
+          // following handlers finish. Otherwise it is optional to call.
           context.next();
-          
-          // 7. When the next handler finishes execution, some following up 
+          // When the next handler finishes execution, some following up 
           // logics can be performed here.
-          Integer counter = (Integer)context.state.get('counter');
+          
+          // 7. If context.stop() is called before context.next(), any following 
+          // handlers won't be executed, just like the stop in process builder.
+          context.stop();
         }
     }
 }
 ```
 
-#### Trigger Example
+### Trigger Example
 
-```c#
+As you may noticed, why we are creating same handlers for different trigger events, i.e. before update and after update? This is because handlers may need to execute in different orders for different trigger events.
+
+```java
 trigger AccountTrigger on Account (before update, after update) {
     Triggers.prepare()
         .beforeUpdate()
             .bind(new MyAccountHandler())
-         // .bind(new AnotherAccountHandler()
+            .bind(new AnotherAccountHandler()
         .afterUpdate()
+            .bind(new AnotherAccountHandler()
             .bind(new MyAccountHandler())
-         // .bind(new AnotherAccountHandler()
         .execute();
 }
 ```
 
+## APIs
 
+### Trigger Event Interfaces
+
+| Interface               | Method to Implement                                   |
+| ----------------------- | ----------------------------------------------------- |
+| Triggers.BeforeInsert   | `void beforeInsert(Context context, Helper helper);`  |
+| Triggers.AfterInsert    | `void afterInsert(Context context, Helper helper);`   |
+| Triggers.BeforeUpdate   | `void beforeUpdate(Context context, Helper helper);`  |
+| Triggers.AfterUpdate    | `void afterUpdate(Context context, Helper helper);`   |
+| Triggers.BeforeDelete   | `void beforeDelete(Context context, Helper helper);`  |
+| Triggers.AfterDelete    | `void afterDelete(Context context, Helper helper);`   |
+| Triggers.BeforeUndelete | `void afterUndelete(Context context, Helper helper);` |
+
+### Trigger Context
+
+| Property/Method     | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| context.triggerProp | A read-only instance exposes every properties on `Trigger` context, i.e. <br/>   - `Trigger.new` => `context.triggerProp.newList`<br/>   - `Trigger.old` => `context.triggerProp.oldList` |
+| context.state       | A `Map<String, Object>` provided for developers to pass any value down to other handlers. |
+| context.next()      | Call the next handler.                                       |
+| context.stop()      | Stop execute any following handlers. A bit like the the stop in process builders. |
+
+### Trigger Helper
+
+| Method                  | Return Type | Description                                                  |
+| ----------------------- | ----------- | ------------------------------------------------------------ |
+| helper.isChanged        | Boolean     | Check if any record has a field changed during an update.    |
+| helper.isChangedAny     | Boolean     | Check if any record has multiple fields changed during an update. Return true if any specified field is changed. |
+| helper.isChangedAll     | Boolean     | Check if any record has multiple fields changed during an update. Return true only if all specified fields are changed. |
+| helper.filterChanged    | Set\<Id\>   | Filter IDs of records have a field changed during an update. |
+| helper.filterChangedAny | Set\<Id\>   | Filter IDs of records have mulantiple fields changed during an update. Return IDs if any specified field is changed. |
+| helper.filterChangedAll | Set\<Id\>   | Filter IDs of records have mulantiple fields changed during an update. Return IDs only if all specified fields are changed. |
+
+## License
+
+MIT License

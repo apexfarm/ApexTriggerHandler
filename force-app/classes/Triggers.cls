@@ -160,6 +160,18 @@ public class Triggers {
             this.helper = new Helper(triggerProp);
         }
 
+        private void reset() {
+            currIndex = -1;
+        }
+
+        private Boolean hasNext() {
+            return currIndex < handlers.size() - 1;
+        }
+
+        public void stop() {
+            currIndex = handlers.size();
+        }
+
         public void next() {
             if (isWhenFinished && hasNext()) {
                 currIndex++;
@@ -194,14 +206,6 @@ public class Triggers {
                     }
                 }
             }
-        }
-
-        private Boolean hasNext() {
-            return currIndex < handlers.size() - 1;
-        }
-
-        private void reset() {
-            currIndex = -1;
         }
     }
 

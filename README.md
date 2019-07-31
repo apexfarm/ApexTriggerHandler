@@ -37,7 +37,7 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Trigg
         if (context.triggerProp.isUpdate) {
           // 5. Use context.state to pass query or computation results down to all 
           // following handlers within the current trigger context, i.e. before update.
-        	if (context.state.get('counter') == null) {
+          if (context.state.get('counter') == null) {
               context.state.put('counter', 0);
           }
           

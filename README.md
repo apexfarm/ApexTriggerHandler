@@ -26,7 +26,7 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Trigg
         then(context, helper);
     }
   
-  	public void afterUpdate(Triggers.Context context, Triggers.Helper helper) {
+    public void afterUpdate(Triggers.Context context, Triggers.Helper helper) {
         then(context, helper);
     }
   

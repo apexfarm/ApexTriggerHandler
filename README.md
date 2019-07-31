@@ -28,6 +28,8 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
 
 #### Trigger Handler Example
 
+Please check the comments below for detailed explanations and tricks to customize a trigger handler.
+
 ```java
 // 1. Use interfaces instead of a base class to extend a custom handler. With interface 
 // approach we can declare only the needed interfaces explicitly, which is much cleaner 
@@ -80,7 +82,7 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Trigg
 
 ### Trigger Example
 
-As you may noticed, why we are creating same handlers for different trigger events, i.e. before update and after update? This is because handlers may need to execute in different orders for different trigger events.
+As you have noticed, why we are creating same handlers for different trigger events? This is because handlers may need to execute in different orders for different trigger events, we need to provide developers great controls over the order of executions.
 
 ```java
 trigger AccountTrigger on Account (before update, after update) {

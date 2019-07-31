@@ -12,10 +12,18 @@ There are already many trigger handler libraries out there, but this one has som
 
 ## Usage
 
-To create a trigger handler, you will need to create a class implementing the `Triggers.Handler` interface, and the corresponding trigger event interface you want to the handler to handle.
+To create a trigger handler, you will need to create a class that implements the `Triggers.Handler` interface `when` method, and the corresponding trigger event methods, such as the `Triggers.BeforeUpdate` interface `beforeUpdate` method. 
 
 ```java
-class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate { ... }
+class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate { 
+    public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+        return true;
+    }
+  
+    public void beforeUpdate(Triggers.Context context, Triggers.Helper helper) {
+        // do stuff
+    }
+}
 ```
 
 #### Trigger Handler Example
@@ -89,17 +97,18 @@ trigger AccountTrigger on Account (before update, after update) {
 
 ## APIs
 
-### Trigger Event Interfaces
+### Trigger Handler Interfaces
 
-| Interface               | Method to Implement                                   |
-| ----------------------- | ----------------------------------------------------- |
-| Triggers.BeforeInsert   | `void beforeInsert(Context context, Helper helper);`  |
-| Triggers.AfterInsert    | `void afterInsert(Context context, Helper helper);`   |
-| Triggers.BeforeUpdate   | `void beforeUpdate(Context context, Helper helper);`  |
-| Triggers.AfterUpdate    | `void afterUpdate(Context context, Helper helper);`   |
-| Triggers.BeforeDelete   | `void beforeDelete(Context context, Helper helper);`  |
-| Triggers.AfterDelete    | `void afterDelete(Context context, Helper helper);`   |
-| Triggers.BeforeUndelete | `void afterUndelete(Context context, Helper helper);` |
+| Interface               | Method to Implement                                          |
+| ----------------------- | ------------------------------------------------------------ |
+| Triggers.Handler        | `Boolean when(Triggers.Context context, Triggers.Helper helper);` |
+| Triggers.BeforeInsert   | `void beforeInsert(Triggers.Context context, Triggers.Helper helper);` |
+| Triggers.AfterInsert    | `void afterInsert(Triggers.Context context, Triggers.Helper helper);` |
+| Triggers.BeforeUpdate   | `void beforeUpdate(Triggers.Context context, Triggers.Helper helper);` |
+| Triggers.AfterUpdate    | `void afterUpdate(Triggers.Context context, Triggers.Helper helper);` |
+| Triggers.BeforeDelete   | `void beforeDelete(Triggers.Context context, Triggers.Helper helper);` |
+| Triggers.AfterDelete    | `void afterDelete(Triggers.Context context, Triggers.Helper helper);` |
+| Triggers.BeforeUndelete | `void afterUndelete(Triggers.Context context, Triggers.Helper helper);` |
 
 ### Trigger Context
 

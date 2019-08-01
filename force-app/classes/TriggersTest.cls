@@ -5,7 +5,7 @@ private with sharing class TriggersTest {
     class FirstHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
             context.next(); // negative case, shouldn't do this
             return Triggers.WHEN_ALWAYS;
         }
@@ -51,7 +51,7 @@ private with sharing class TriggersTest {
     class TestHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
@@ -91,10 +91,8 @@ private with sharing class TriggersTest {
         }
     }
 
-    class StopHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
-        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
-        Triggers.AfterUndelete {
-        public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+    class StopHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
@@ -106,69 +104,84 @@ private with sharing class TriggersTest {
         public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
             then(context, helper);
         }
-
-        public void afterInsert(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
-        }
-
-        public void beforeUpdate(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
-        }
-
-        public void afterUpdate(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
-        }
-
-        public void beforeDelete(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
-        }
-
-        public void afterDelete(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
-        }
-
-        public void afterUndelete(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
-        }
     }
 
-    class SkipHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
-        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
-        Triggers.AfterUndelete {
-        public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+    class InactiveHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
             context.next(); // shouldn't work in when method
             return !Triggers.WHEN_ALWAYS;
         }
 
         private void then(Triggers.Context context, Triggers.Helper helper) {
-            context.stop();
+            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+            context.next();
+            context.state.put('counter', (Integer)context.state.get('counter') + 1);
         }
 
         public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
             then(context, helper);
         }
+    }
 
-        public void afterInsert(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
+    class AddSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
+            return Triggers.WHEN_ALWAYS;
         }
 
-        public void beforeUpdate(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
+        private void then(Triggers.Context context, Triggers.Helper helper) {
+            context.skips.add(SkipHandler.class);
+            context.next();
         }
 
-        public void afterUpdate(Triggers.Context context, Triggers.Helper helper) {
+        public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
             then(context, helper);
         }
+    }
 
-        public void beforeDelete(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
+    class RemoveSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
+            return Triggers.WHEN_ALWAYS;
         }
 
-        public void afterDelete(Triggers.Context context, Triggers.Helper helper) {
-            then(context, helper);
+        private void then(Triggers.Context context, Triggers.Helper helper) {
+            if (context.skips.contains(SkipHandler.class)) {
+                context.skips.remove(SkipHandler.class);
+            }
+            context.next();
         }
 
-        public void afterUndelete(Triggers.Context context, Triggers.Helper helper) {
+        public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+    }
+
+    class ClearSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context, Triggers.Helper helper) {
+            context.skips.clear();
+            context.next();
+        }
+
+        public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+    }
+
+    class SkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context, Triggers.Helper helper) {
+            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+            context.next();
+            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+        }
+
+        public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
             then(context, helper);
         }
     }
@@ -176,7 +189,7 @@ private with sharing class TriggersTest {
     class LastHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+        public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
@@ -227,6 +240,13 @@ private with sharing class TriggersTest {
     }
 
     @IsTest
+    static void testSkips_getHandlerName_ByType() {
+        Triggers.Skips skips = new Triggers.Skips();
+        String className = skips.getHandlerName(String.class);
+        System.assertEquals('String', className);
+    }
+
+    @IsTest
     static void testBinding_BaseLine() {
         Triggers.prepare()
             .beforeInsert()
@@ -251,16 +271,16 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_Stop_BeforeInsert() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = true;
-        triggers.context.triggerProp.isAfter = false;
-        triggers.context.triggerProp.isInsert = true;
-        triggers.context.triggerProp.isUpdate = false;
-        triggers.context.triggerProp.isDelete = false;
-        triggers.context.triggerProp.isUndelete = false;
-        triggers.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = true;
+        triggerManager.context.triggerProp.isAfter = false;
+        triggerManager.context.triggerProp.isInsert = true;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
 
-        triggers
+        triggerManager
             .beforeInsert()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
@@ -270,44 +290,95 @@ private with sharing class TriggersTest {
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
+    }
+
+    @IsTest
+    static void testBinding_Inactive_BeforeInsert() {
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = true;
+        triggerManager.context.triggerProp.isAfter = false;
+        triggerManager.context.triggerProp.isInsert = true;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
+
+        triggerManager
+            .beforeInsert()
+                .bind(new FirstHandler())
+                .bind(new TestHandler())
+                .bind(new InactiveHandler())
+                .bind(new TestHandler())
+                .bind(new LastHandler())
+        .execute();
+
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
     static void testBinding_Skip_BeforeInsert() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = true;
-        triggers.context.triggerProp.isAfter = false;
-        triggers.context.triggerProp.isInsert = true;
-        triggers.context.triggerProp.isUpdate = false;
-        triggers.context.triggerProp.isDelete = false;
-        triggers.context.triggerProp.isUndelete = false;
-        triggers.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = true;
+        triggerManager.context.triggerProp.isAfter = false;
+        triggerManager.context.triggerProp.isInsert = true;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
 
-        triggers
+        triggerManager
             .beforeInsert()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
+                .bind(new AddSkipHandler())
                 .bind(new SkipHandler())
-                .bind(new TestHandler())
+                .bind(new RemoveSkipHandler())
+                .bind(new SkipHandler())
+                .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
+    }
+
+    @IsTest
+    static void testBinding_Clear_BeforeInsert() {
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = true;
+        triggerManager.context.triggerProp.isAfter = false;
+        triggerManager.context.triggerProp.isInsert = true;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
+
+        triggerManager
+            .beforeInsert()
+                .bind(new FirstHandler())
+                .bind(new TestHandler())
+                .bind(new AddSkipHandler())
+                .bind(new SkipHandler())
+                .bind(new ClearSkipHandler())
+                .bind(new SkipHandler())
+                .bind(new LastHandler())
+        .execute();
+
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     // #region Test State
     @IsTest
     static void testBinding_State_BeforeInsert() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = true;
-        triggers.context.triggerProp.isAfter = false;
-        triggers.context.triggerProp.isInsert = true;
-        triggers.context.triggerProp.isUpdate = false;
-        triggers.context.triggerProp.isDelete = false;
-        triggers.context.triggerProp.isUndelete = false;
-        triggers.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = true;
+        triggerManager.context.triggerProp.isAfter = false;
+        triggerManager.context.triggerProp.isInsert = true;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
 
-        triggers
+        triggerManager
             .beforeInsert()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
@@ -315,21 +386,21 @@ private with sharing class TriggersTest {
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
     static void testBinding_State_AfterInsert() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = false;
-        triggers.context.triggerProp.isAfter = true;
-        triggers.context.triggerProp.isInsert = true;
-        triggers.context.triggerProp.isUpdate = false;
-        triggers.context.triggerProp.isDelete = false;
-        triggers.context.triggerProp.isUndelete = false;
-        triggers.context.triggerProp.operationType = TriggerOperation.AFTER_INSERT;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = false;
+        triggerManager.context.triggerProp.isAfter = true;
+        triggerManager.context.triggerProp.isInsert = true;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.AFTER_INSERT;
 
-        triggers
+        triggerManager
             .afterInsert()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
@@ -337,21 +408,21 @@ private with sharing class TriggersTest {
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
     static void testBinding_State_BeforeUpdate() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = true;
-        triggers.context.triggerProp.isAfter = false;
-        triggers.context.triggerProp.isInsert = false;
-        triggers.context.triggerProp.isUpdate = true;
-        triggers.context.triggerProp.isDelete = false;
-        triggers.context.triggerProp.isUndelete = false;
-        triggers.context.triggerProp.operationType = TriggerOperation.BEFORE_UPDATE;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = true;
+        triggerManager.context.triggerProp.isAfter = false;
+        triggerManager.context.triggerProp.isInsert = false;
+        triggerManager.context.triggerProp.isUpdate = true;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.BEFORE_UPDATE;
 
-        triggers
+        triggerManager
             .beforeUpdate()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
@@ -359,21 +430,21 @@ private with sharing class TriggersTest {
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
     static void testBinding_State_AfterUpdate() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = false;
-        triggers.context.triggerProp.isAfter = true;
-        triggers.context.triggerProp.isInsert = false;
-        triggers.context.triggerProp.isUpdate = true;
-        triggers.context.triggerProp.isDelete = false;
-        triggers.context.triggerProp.isUndelete = false;
-        triggers.context.triggerProp.operationType = TriggerOperation.AFTER_UPDATE;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = false;
+        triggerManager.context.triggerProp.isAfter = true;
+        triggerManager.context.triggerProp.isInsert = false;
+        triggerManager.context.triggerProp.isUpdate = true;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.AFTER_UPDATE;
 
-        triggers
+        triggerManager
             .afterUpdate()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
@@ -381,21 +452,21 @@ private with sharing class TriggersTest {
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
     static void testBinding_State_BeforeDelete() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = true;
-        triggers.context.triggerProp.isAfter = false;
-        triggers.context.triggerProp.isInsert = false;
-        triggers.context.triggerProp.isUpdate = false;
-        triggers.context.triggerProp.isDelete = true;
-        triggers.context.triggerProp.isUndelete = false;
-        triggers.context.triggerProp.operationType = TriggerOperation.BEFORE_DELETE;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = true;
+        triggerManager.context.triggerProp.isAfter = false;
+        triggerManager.context.triggerProp.isInsert = false;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = true;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.BEFORE_DELETE;
 
-        triggers
+        triggerManager
             .beforeDelete()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
@@ -403,21 +474,21 @@ private with sharing class TriggersTest {
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
     static void testBinding_State_AfterDelete() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = false;
-        triggers.context.triggerProp.isAfter = true;
-        triggers.context.triggerProp.isInsert = false;
-        triggers.context.triggerProp.isUpdate = false;
-        triggers.context.triggerProp.isDelete = true;
-        triggers.context.triggerProp.isUndelete = false;
-        triggers.context.triggerProp.operationType = TriggerOperation.AFTER_DELETE;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = false;
+        triggerManager.context.triggerProp.isAfter = true;
+        triggerManager.context.triggerProp.isInsert = false;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = true;
+        triggerManager.context.triggerProp.isUndelete = false;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.AFTER_DELETE;
 
-        triggers
+        triggerManager
             .afterDelete()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
@@ -425,21 +496,21 @@ private with sharing class TriggersTest {
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
     static void testBinding_State_AfterUndelete() {
-        Triggers triggers = Triggers.prepare();
-        triggers.context.triggerProp.isBefore = false;
-        triggers.context.triggerProp.isAfter = true;
-        triggers.context.triggerProp.isInsert = false;
-        triggers.context.triggerProp.isUpdate = false;
-        triggers.context.triggerProp.isDelete = false;
-        triggers.context.triggerProp.isUndelete = true;
-        triggers.context.triggerProp.operationType = TriggerOperation.AFTER_UNDELETE;
+        Triggers.Manager triggerManager = Triggers.prepare();
+        triggerManager.context.triggerProp.isBefore = false;
+        triggerManager.context.triggerProp.isAfter = true;
+        triggerManager.context.triggerProp.isInsert = false;
+        triggerManager.context.triggerProp.isUpdate = false;
+        triggerManager.context.triggerProp.isDelete = false;
+        triggerManager.context.triggerProp.isUndelete = true;
+        triggerManager.context.triggerProp.operationType = TriggerOperation.AFTER_UNDELETE;
 
-        triggers
+        triggerManager
             .afterUndelete()
                 .bind(new FirstHandler())
                 .bind(new TestHandler())
@@ -447,7 +518,7 @@ private with sharing class TriggersTest {
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggers.context.state.get('counter'));
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
     // #endregion
 

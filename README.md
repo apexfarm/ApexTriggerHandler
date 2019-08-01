@@ -6,80 +6,27 @@ There are already many trigger handler libraries out there, but this one has som
 
 ## Features
 
-1. In favour of interface implementation over the base class extension.
-2. Enable sharing state across different handlers easily.
-3. Built-in helper to perform operations with Trigger.new or Trigger.old.
+1. Share common query results via context.state with the following handlers in the current trigger execution context.
+2. Built-in helper to perform common operations with Trigger.new or Trigger.old, such as detect field changes.
+3. Control flow of handler execution with context.next(), context.stop(), and context.skips.
 
 ## Usage
 
-To create a trigger handler, you will need to create a class that implements the `Triggers.Handler` interface `when` method, and the corresponding trigger event methods, such as the `Triggers.BeforeUpdate` interface `beforeUpdate` method. 
+To create a trigger handler, you will need to create a class that implements the `Triggers.Handler` interface and its `criteria` method, and the corresponding trigger event method interfaces, such as the `Triggers.BeforeUpdate` interface and its `beforeUpdate` method.
 
 ```java
-class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate { 
-    public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
+    public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
         return true;
     }
-  
+
     public void beforeUpdate(Triggers.Context context, Triggers.Helper helper) {
         // do stuff
     }
 }
 ```
 
-### Trigger Handler Example
-
-Please check the comments below for detailed explanations and tricks to customize a trigger handler.
-
-```java
-// 1. Use interfaces instead of a base class to extend a custom handler. With interface 
-// approach we can declare only the needed interfaces explicitly, which is much cleaner 
-// and clearer.
-class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Triggers.AfterUpdate {
-  
-    // 2. There is a "when" stage before any handler execution. This gives 
-    // developers chances to turn on and off the handlers according to 
-    // configurations at run time. 
-    public Boolean when(Triggers.Context context, Triggers.Helper helper) {
-        return Triggers.WHEN_ALWAYS;
-        // 3. There are also helper methods to check if certain fields have changes
-        // return helper.isChangedAny(Account.Name, Account.Description);
-        // return helper.isChangedAll(Account.Name, Account.Description);
-    }
-
-    public void beforeUpdate(Triggers.Context context, Triggers.Helper helper) {
-        then(context, helper);
-    }
-  
-    public void afterUpdate(Triggers.Context context, Triggers.Helper helper) {
-        then(context, helper);
-    }
-  
-    private void then(Triggers.Context context, Triggers.Helper helper) {
-        // 4. All properties on Trigger have been exposed to context.triggerProp. 
-      	// Direct reference of Trigger.old and Trigger.new can be avoided, 
-        // instead use context.triggerProp.oldList and context.triggerProp.newList.
-        if (context.triggerProp.isUpdate) {
-          // 5. Use context.state to pass query or computation results down to all 
-          // following handlers within the current trigger context, i.e. before update.
-          if (context.state.get('counter') == null) {
-              context.state.put('counter', 0);
-          }
-          
-          // 6. Call context.next() to execute the next handler. It is optional to use.
-          // But this will be required by every following handlers once used.
-          context.next();
-          // When the next handler finishes execution, some following up 
-          // logics can be performed here, such as post validation.
-          
-          // 7. If context.stop() is called before context.next(), any following 
-          // handlers won't be executed, just like the stop in process builder.
-          context.stop();
-        }
-    }
-}
-```
-
-### Trigger Example
+### Trigger
 
 As you have noticed, why we are creating same handlers for different trigger events? This is because handlers may need to execute in different orders for different trigger events, we need to provide developers great controls over the order of executions.
 
@@ -96,13 +43,100 @@ trigger AccountTrigger on Account (before update, after update) {
 }
 ```
 
+### Trigger Handler
+
+Please check the comments below for detailed explanations and tricks to customize a trigger handler.
+
+```java
+// 1. Use interfaces instead of a base class to extend a custom handler. With interface
+// approach we can declare only the needed interfaces explicitly, which is much cleaner
+// and clearer.
+class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Triggers.AfterUpdate {
+
+    // 2. There is a "criteria" stage before any handler execution. This gives
+    // developers chances to turn on and off the handlers according to
+    // configurations at run time.
+    public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
+        return Triggers.WHEN_ALWAYS;
+        // 3. There are also helper methods to check if certain fields have changes
+        // return helper.isChangedAny(Account.Name, Account.Description);
+        // return helper.isChangedAll(Account.Name, Account.Description);
+    }
+
+    public void beforeUpdate(Triggers.Context context, Triggers.Helper helper) {
+        then(context, helper);
+    }
+
+    public void afterUpdate(Triggers.Context context, Triggers.Helper helper) {
+        then(context, helper);
+    }
+
+    private void then(Triggers.Context context, Triggers.Helper helper) {
+        // 4. All properties on Trigger have been exposed to context.triggerProp.
+      	// Direct reference of Trigger.old and Trigger.new can be avoided,
+        // instead use context.triggerProp.oldList and context.triggerProp.newList.
+        if (context.triggerProp.isUpdate) {
+          // 5. Use context.state to pass query or computation results down to all
+          // following handlers within the current trigger context, i.e. before update.
+          if (context.state.get('counter') == null) {
+              context.state.put('counter', 0);
+          }
+
+          // 6. Use context.skips or Triggers.skips to prevent specific handlers from
+          // execution. Please do remember restore the handler when appropriate.
+          context.skips.add(ContactHandler.class);
+          List<Contact> contacts = ...;
+          Database.insert(contacts);
+          context.skips.remove(ContactHandler.class);
+
+          // 7-1. Call context.next() to execute the next handler. It is optional to use.
+          // But this will be required by every following handlers once used.
+          context.next();
+          // When the next handler finishes execution, some following up
+          // logics can be performed here, such as post validation.
+
+          // 7-2. If context.stop() is called instead of context.next(), any following
+          // handlers won't be executed, just like the stop in process builder.
+          context.stop();
+        }
+    }
+}
+```
+
+### More on Skips
+
+`context.skips` references the same global static variable `Triggers.skips`. If you wan to skip handlers in contexts other than a trigger handler. Please use `Triggers.skips` instead. Such as when you want to skip a trigger handler in a batch class:
+
+```java
+global class AccountUpdateBatch implements Database.Batchable<sObject> {
+    ...
+    global void execute(Database.BatchableContext BC, List<sObject> scope){
+        Triggers.skips.add(MyAccountHandler.class);
+        // Update accounts...
+        Triggers.skips.remove(MyAccountHandler.class);
+    }
+    ...
+}
+```
+
+Or you can skip the handler in the criteria phase:
+
+```java
+class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
+    public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
+        return !System.isBatch();
+    }
+    ...
+}
+```
+
 ## APIs
 
 ### Trigger Handler Interfaces
 
 | Interface               | Method to Implement                                          |
 | ----------------------- | ------------------------------------------------------------ |
-| Triggers.Handler        | `Boolean when(Triggers.Context context, Triggers.Helper helper);` |
+| Triggers.Handler        | `Boolean criteria(Triggers.Context context, Triggers.Helper helper);` |
 | Triggers.BeforeInsert   | `void beforeInsert(Triggers.Context context, Triggers.Helper helper);` |
 | Triggers.AfterInsert    | `void afterInsert(Triggers.Context context, Triggers.Helper helper);` |
 | Triggers.BeforeUpdate   | `void beforeUpdate(Triggers.Context context, Triggers.Helper helper);` |
@@ -117,6 +151,7 @@ trigger AccountTrigger on Account (before update, after update) {
 | ------------------- | ------------------------------------------------------------ |
 | context.triggerProp | A read-only instance exposes every properties on `Trigger` context, i.e. <br/>   - `Trigger.new` => `context.triggerProp.newList`<br/>   - `Trigger.old` => `context.triggerProp.oldList`<br/>   - `Trigger.isUpdate` => `context.triggerProp.isUpdate`<br/>   - `Trigger.isBefore` => `context.triggerProp.isBefore` |
 | context.state       | A `Map<String, Object>` provided for developers to pass any value down to other handlers. |
+| context.skips       | A Set wrapper to store handler names to be skipped. You can call `context.skips.add()`, `context.skips.remove()`, `context.skips.clear()` `context.skips.contains()` etc. The passed-in handlers could be trigger handlers of different sObject triggers. |
 | context.next()      | Call the next handler.                                       |
 | context.stop()      | Stop execute any following handlers. A bit like the the stop in process builders. |
 

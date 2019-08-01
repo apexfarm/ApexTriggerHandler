@@ -15,7 +15,7 @@ There are already many trigger handler libraries out there, but this one has som
 To create a trigger handler, you will need to create a class that implements the `Triggers.Handler` interface and its `criteria` method, and the corresponding trigger event method interfaces, such as the `Triggers.BeforeUpdate` interface and its `beforeUpdate` method.
 
 ```java
-class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
+public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
     public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
         return true;
     }
@@ -51,13 +51,16 @@ Please check the comments below for detailed explanations and tricks to customiz
 // 1. Use interfaces instead of a base class to extend a custom handler. With interface
 // approach we can declare only the needed interfaces explicitly, which is much cleaner
 // and clearer.
-class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Triggers.AfterUpdate {
+public class MyAccountHandler implements Triggers.Handler, 
+                                         Triggers.BeforeUpdate, 
+                                         Triggers.AfterUpdate {
 
     // 2. There is a "criteria" stage before any handler execution. This gives
     // developers chances to turn on and off the handlers according to
     // configurations at run time.
     public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
         return Triggers.WHEN_ALWAYS;
+
         // 3. There are also helper methods to check if certain fields have changes
         // return helper.isChangedAny(Account.Name, Account.Description);
         // return helper.isChangedAll(Account.Name, Account.Description);
@@ -76,6 +79,7 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Trigg
       	// Direct reference of Trigger.old and Trigger.new can be avoided,
         // instead use context.triggerProp.oldList and context.triggerProp.newList.
         if (context.triggerProp.isUpdate) {
+
           // 5. Use context.state to pass query or computation results down to all
           // following handlers within the current trigger context, i.e. before update.
           if (context.state.get('counter') == null) {
@@ -105,7 +109,7 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Trigg
 
 ### More on Skips
 
-`context.skips` references the same global static variable `Triggers.skips`. If you wan to skip handlers in contexts other than a trigger handler. Please use `Triggers.skips` instead. Such as when you want to skip a trigger handler in a batch class:
+`context.skips` references the same global static variable `Triggers.skips`. If you want to skip handlers in contexts rather than a trigger handler. Please use `Triggers.skips` instead. For example, when you want to skip a trigger handler in a batch class:
 
 ```java
 global class AccountUpdateBatch implements Database.Batchable<sObject> {
@@ -119,10 +123,10 @@ global class AccountUpdateBatch implements Database.Batchable<sObject> {
 }
 ```
 
-Or you can skip the handler in the criteria phase:
+Or you can skip the handler during batch execution in the criteria phase:
 
 ```java
-class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
+public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
     public Boolean criteria(Triggers.Context context, Triggers.Helper helper) {
         return !System.isBatch();
     }

@@ -132,6 +132,47 @@ private with sharing class TriggersTest {
         }
     }
 
+    class SkipHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
+        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
+        Triggers.AfterUndelete {
+        public Boolean when(Triggers.Context context, Triggers.Helper helper) {
+            context.next(); // shouldn't work in when method
+            return !Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context, Triggers.Helper helper) {
+            context.stop();
+        }
+
+        public void beforeInsert(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void afterInsert(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void beforeUpdate(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void afterUpdate(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void beforeDelete(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void afterDelete(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+
+        public void afterUndelete(Triggers.Context context, Triggers.Helper helper) {
+            then(context, helper);
+        }
+    }
+
     class LastHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
@@ -227,6 +268,28 @@ private with sharing class TriggersTest {
                 .bind(new StopHandler())
                 .bind(new TestHandler())
                 .bind(new LastHandler())
+        .execute();
+
+        System.assertEquals(4, triggers.context.state.get('counter'));
+    }
+
+    @IsTest
+    static void testBinding_Skip_BeforeInsert() {
+        Triggers triggers = Triggers.prepare();
+        triggers.context.triggerProp.isBefore = true;
+        triggers.context.triggerProp.isAfter = false;
+        triggers.context.triggerProp.isInsert = true;
+        triggers.context.triggerProp.isUpdate = false;
+        triggers.context.triggerProp.isDelete = false;
+        triggers.context.triggerProp.isUndelete = false;
+        triggers.context.triggerProp.operationType = TriggerOperation.BEFORE_INSERT;
+
+        triggers
+            .beforeInsert()
+                .bind(new FirstHandler())
+                .bind(new TestHandler())
+                .bind(new SkipHandler())
+                .bind(new TestHandler())
         .execute();
 
         System.assertEquals(4, triggers.context.state.get('counter'));

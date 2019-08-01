@@ -26,7 +26,7 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
 }
 ```
 
-#### Trigger Handler Example
+### Trigger Handler Example
 
 Please check the comments below for detailed explanations and tricks to customize a trigger handler.
 
@@ -65,12 +65,11 @@ class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate, Trigg
               context.state.put('counter', 0);
           }
           
-          // 6. Call context.next() to execute the next handler. This is required for
-          // every following handlers if need to wrap up something after all the 
-          // following handlers finish. Otherwise it is optional to call.
+          // 6. Call context.next() to execute the next handler. It is optional to use.
+          // But this will be required by every following handlers once used.
           context.next();
           // When the next handler finishes execution, some following up 
-          // logics can be performed here.
+          // logics can be performed here, such as post validation.
           
           // 7. If context.stop() is called before context.next(), any following 
           // handlers won't be executed, just like the stop in process builder.

@@ -204,6 +204,9 @@ public class Triggers {
                         when else {
                         }
                     }
+                } else {
+                    isWhenFinished = true;
+                    next();
                 }
             }
         }

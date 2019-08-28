@@ -164,20 +164,20 @@ public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate
 
 | Property            | Type               | Description                                        |
 | ------------------- | ------------------ | -------------------------------------------------- |
-| props.sObjectType   | SObjectType        | The current sObjectType the trigger is running on. |
-| props.isExecuting   | Boolean            | Trigger.isExecuting                                |
-| props.isBefore      | Boolean            | Trigger.isBefore                                   |
-| props.isAfter       | Boolean            | Trigger.isAfter                                    |
-| props.isInsert      | Boolean            | Trigger.isInsert                                   |
-| props.isUpdate      | Boolean            | Trigger.isUpdate                                   |
-| props.isDelete      | Boolean            | Trigger.isDelete                                   |
-| props.isUndelete    | Boolean            | Trigger.isUndelete                                 |
-| props.oldList       | List\<SObject\>    | Trigger.old                                        |
-| props.oldMap        | Map\<Id, SObject\> | Trigger.oldMap                                     |
-| props.newList       | List\<SObject\>    | Trigger.new                                        |
-| props.newMap        | Map\<Id, SObject\> | Trigger.newMap                                     |
-| props.operationType | TriggerOperation   | Trigger.operationType                              |
-| props.size          | Integer            | Trigger.size                                       |
+| sObjectType         | SObjectType        | The current sObjectType the trigger is running on. |
+| isExecuting         | Boolean            | Trigger.isExecuting                                |
+| isBefore            | Boolean            | Trigger.isBefore                                   |
+| isAfter             | Boolean            | Trigger.isAfter                                    |
+| isInsert            | Boolean            | Trigger.isInsert                                   |
+| isUpdate            | Boolean            | Trigger.isUpdate                                   |
+| isDelete            | Boolean            | Trigger.isDelete                                   |
+| isUndelete          | Boolean            | Trigger.isUndelete                                 |
+| oldList             | List\<SObject\>    | Trigger.old                                        |
+| oldMap              | Map\<Id, SObject\> | Trigger.oldMap                                     |
+| newList             | List\<SObject\>    | Trigger.new                                        |
+| newMap              | Map\<Id, SObject\> | Trigger.newMap                                     |
+| operationType       | TriggerOperation   | Trigger.operationType                              |
+| size                | Integer            | Trigger.size                                       |
 
 #### Methods
 

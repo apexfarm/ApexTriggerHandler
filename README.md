@@ -20,7 +20,7 @@ public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate
         return true;
     }
 
-    public void beforeUpdate(Triggers.Helper helper) {
+    public void beforeUpdate(Triggers.Context context) {
         // do stuff
     }
 }

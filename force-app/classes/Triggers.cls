@@ -7,61 +7,61 @@ public class Triggers {
     }
 
     public class Manager {
-        public TriggerProp triggerProp { get; private set; }
+        public Props props { get; private set; }
         public Context context { get; private set; }
 
         Boolean canBind = false;
 
         @TestVisible
         private Manager() {
-            this(new TriggerProp());
+            this(new Props());
         }
 
         @TestVisible
-        private Manager(TriggerProp triggerProp) {
-            this.triggerProp = triggerProp;
-            this.context = new Context(triggerProp);
+        private Manager(Props props) {
+            this.props = props;
+            this.context = new Context(props);
         }
 
         public Manager beforeInsert() {
-            canBind = triggerProp.operationType == TriggerOperation.BEFORE_INSERT;
+            canBind = props.operationType == TriggerOperation.BEFORE_INSERT;
             return this;
         }
 
         public Manager afterInsert() {
-            canBind = triggerProp.operationType == TriggerOperation.AFTER_INSERT;
+            canBind = props.operationType == TriggerOperation.AFTER_INSERT;
             return this;
         }
 
         public Manager beforeUpdate() {
-            canBind = triggerProp.operationType == TriggerOperation.BEFORE_UPDATE;
+            canBind = props.operationType == TriggerOperation.BEFORE_UPDATE;
             return this;
         }
 
         public Manager afterUpdate() {
-            canBind = triggerProp.operationType == TriggerOperation.AFTER_UPDATE;
+            canBind = props.operationType == TriggerOperation.AFTER_UPDATE;
             return this;
         }
 
         public Manager beforeDelete() {
-            canBind = triggerProp.operationType == TriggerOperation.BEFORE_DELETE;
+            canBind = props.operationType == TriggerOperation.BEFORE_DELETE;
             return this;
         }
 
         public Manager afterDelete() {
-            canBind = triggerProp.operationType == TriggerOperation.AFTER_DELETE;
+            canBind = props.operationType == TriggerOperation.AFTER_DELETE;
             return this;
         }
 
         public Manager afterUndelete() {
-            canBind = triggerProp.operationType == TriggerOperation.AFTER_UNDELETE;
+            canBind = props.operationType == TriggerOperation.AFTER_UNDELETE;
             return this;
         }
 
         public Manager bind(Handler handler) {
             if (canBind) {
                 Boolean isImplementation = false;
-                switch on triggerProp.operationType {
+                switch on props.operationType {
                     when BEFORE_INSERT {
                         isImplementation = handler instanceOf BeforeInsert;
                     }
@@ -94,10 +94,7 @@ public class Triggers {
         }
 
         public void execute() {
-            context.reset();
-            while (context.hasNext()) {
-                context.next();
-            }
+            context.execute();
         }
     }
 
@@ -144,91 +141,152 @@ public class Triggers {
     }
 
     public class Context {
-        @TestVisible
-        public TriggerProp triggerProp { get; private set; }
         public final Map<String, Object> state { get; private set; }
         public final Skips skips { get; private set; }
+        private Props props = null;
 
         private final List<Handler> handlers = new List<Handler>();
         private Integer currIndex = -1;
-        private Boolean isTestCriteria = true;
-        private Helper helper = null;
+        private Boolean isExecutingCriteria = false;
 
-        private Context(TriggerProp triggerProp) {
-            this.triggerProp = triggerProp;
+        private Context(Props props) {
             this.state = new Map<String, Object>();
             this.skips = Triggers.skips;
-            this.helper = new Helper(triggerProp);
+            this.props = props;
         }
 
         private void reset() {
-            currIndex = -1;
+            this.currIndex = -1;
         }
 
         private Boolean hasNext() {
-            return currIndex < handlers.size() - 1;
+            return this.currIndex < this.handlers.size() - 1;
         }
 
         public void stop() {
-            currIndex = handlers.size();
+            this.currIndex = this.handlers.size();
         }
 
         public void next() {
-            if (isTestCriteria && hasNext()) {
-                currIndex++;
-                Handler handler = handlers[currIndex];
-                isTestCriteria = false;
-                if (!this.skips.contains(handler) && handler.criteria(this, helper) == true) {
-                    isTestCriteria = true;
-                    switch on triggerProp.operationType {
-                        when BEFORE_INSERT {
-                            ((BeforeInsert)handler).beforeInsert(this, helper);
-                        }
-                        when AFTER_INSERT {
-                            ((AfterInsert)handler).afterInsert(this, helper);
-                        }
-                        when BEFORE_UPDATE {
-                            ((BeforeUpdate)handler).beforeUpdate(this, helper);
-                        }
-                        when AFTER_UPDATE {
-                            ((AfterUpdate)handler).afterUpdate(this, helper);
-                        }
-                        when BEFORE_DELETE {
-                            ((BeforeDelete)handler).beforeDelete(this, helper);
-                        }
-                        when AFTER_DELETE {
-                            ((AfterDelete)handler).afterDelete(this, helper);
-                        }
-                        when AFTER_UNDELETE {
-                            ((AfterUndelete)handler).afterUndelete(this, helper);
-                        }
-                        when else {
-                        }
-                    }
-                } else {
-                    isTestCriteria = true;
-                    next();
+            if (!this.isExecutingCriteria) {
+                while (hasNext()) {
+                    runNext();
                 }
+            }
+        }
+
+        private void execute() {
+            reset();
+            while (hasNext()) {
+                runNext();
+            }
+        }
+
+        private void runNext() {
+            this.currIndex++;
+            Handler handler = this.handlers[this.currIndex];
+            this.isExecutingCriteria = true;
+            if (!this.skips.contains(handler) && handler.criteria(this.props, this) == true) {
+                this.isExecutingCriteria = false;
+                switch on this.props.operationType {
+                    when BEFORE_INSERT {
+                        ((BeforeInsert)handler).beforeInsert(this.props, this);
+                    }
+                    when AFTER_INSERT {
+                        ((AfterInsert)handler).afterInsert(this.props, this);
+                    }
+                    when BEFORE_UPDATE {
+                        ((BeforeUpdate)handler).beforeUpdate(this.props, this);
+                    }
+                    when AFTER_UPDATE {
+                        ((AfterUpdate)handler).afterUpdate(this.props, this);
+                    }
+                    when BEFORE_DELETE {
+                        ((BeforeDelete)handler).beforeDelete(this.props, this);
+                    }
+                    when AFTER_DELETE {
+                        ((AfterDelete)handler).afterDelete(this.props, this);
+                    }
+                    when AFTER_UNDELETE {
+                        ((AfterUndelete)handler).afterUndelete(this.props, this);
+                    }
+                    when else {
+                    }
+                }
+            } else {
+                this.isExecutingCriteria = false;
             }
         }
     }
 
-    public class Helper {
-        TriggerProp triggerProp;
+    public class Props {
+        // Standard Properties
+        @TestVisible
+        public Boolean isExecuting { get; private set; }
+        @TestVisible
+        public Boolean isBefore { get; private set; }
+        @TestVisible
+        public Boolean isAfter { get; private set; }
+        @TestVisible
+        public Boolean isInsert { get; private set; }
+        @TestVisible
+        public Boolean isUpdate { get; private set; }
+        @TestVisible
+        public Boolean isDelete { get; private set; }
+        @TestVisible
+        public Boolean isUndelete { get; private set; }
+        @TestVisible
+        public List<SObject> oldList { get; private set; }
+        @TestVisible
+        public Map<Id, SObject> oldMap { get; private set; }
+        @TestVisible
+        public List<SObject> newList { get; private set; }
+        @TestVisible
+        public Map<Id, SObject> newMap { get; private set; }
+        @TestVisible
+        public TriggerOperation operationType { get; private set; }
+        @TestVisible
+        public Integer size { get; private set; }
+
+        // Custom Properties
+        @TestVisible
+        public SObjectType sObjectType { get; private set; }
 
         @TestVisible
-        private Helper(TriggerProp triggerProp) {
-            this.triggerProp = triggerProp;
+        private Props() {
+            this.isExecuting = Trigger.isExecuting;
+            this.isBefore = Trigger.isBefore;
+            this.isAfter = Trigger.isAfter;
+            this.isInsert = Trigger.isInsert;
+            this.isUpdate = Trigger.isUpdate;
+            this.isDelete = Trigger.isDelete;
+            this.isUndelete = Trigger.isUndelete;
+            this.oldList = Trigger.old;
+            this.oldMap = Trigger.oldMap;
+            this.newList = Trigger.new;
+            this.newMap = Trigger.newMap;
+            this.operationType = Trigger.operationType;
+            this.size = Trigger.size;
+            this.setSObjectType();
+        }
+
+        @TestVisible
+        private void setSObjectType() {
+            if (this.oldList != null ) {
+                this.sObjectType = this.oldList.getSobjectType();
+            } else if (this.newList != null ) {
+                this.sObjectType = this.newList.getSObjectType();
+            }
         }
 
         public List<Object> getValues(SObjectField field) {
             List<Object> values = new List<Object>();
             List<SObject> objects = new List<SObject>();
 
-            if (triggerProp.isInsert || triggerProp.isUpdate || triggerProp.isUndelete) {
-                objects = triggerProp.newList;
-            } else if (triggerProp.isDelete) {
-                objects = triggerProp.oldList;
+            if (this.isInsert || this.isUpdate || this.isUndelete) {
+                objects = this.newList;
+            } else if (this.isDelete) {
+                objects = this.oldList;
             }
 
             String fieldName = field.getDescribe().getName();
@@ -240,10 +298,10 @@ public class Triggers {
 
         @TestVisible
         private Boolean isChanged(Id objectId, SObjectField field) {
-            if (triggerProp.isUpdate) {
+            if (this.isUpdate) {
                 String fieldName = field.getDescribe().getName();
-                Object oldValue = triggerProp.oldMap.get(objectId).get(fieldName);
-                Object newValue = triggerProp.newMap.get(objectId).get(fieldName);
+                Object oldValue = this.oldMap.get(objectId).get(fieldName);
+                Object newValue = this.newMap.get(objectId).get(fieldName);
                 return oldValue != newValue;
             }
             return false;
@@ -291,8 +349,8 @@ public class Triggers {
 
         public Set<Id> filterChangedAny(List<SObjectField> fields) {
             Set<Id> changedIds = new Set<Id>();
-            if (triggerProp.isUpdate) {
-                for(Id objectId : triggerProp.newMap.keySet()) {
+            if (this.isUpdate) {
+                for(Id objectId : this.newMap.keySet()) {
                     for (SObjectField field : fields) {
                         if (isChanged(objectId, field)) {
                             changedIds.add(objectId);
@@ -314,9 +372,9 @@ public class Triggers {
 
         public Set<Id> filterChangedAll(List<SObjectField> fields) {
             Set<Id> changedIds = new Set<Id>();
-            if (triggerProp.isUpdate) {
-                changedIds = triggerProp.newMap.keySet();
-                for(Id objectId : triggerProp.newMap.keySet()) {
+            if (this.isUpdate) {
+                changedIds = this.newMap.keySet();
+                for(Id objectId : this.newMap.keySet()) {
                     for (SObjectField field : fields) {
                         if (!isChanged(objectId, field)) {
                             changedIds.remove(objectId);
@@ -329,81 +387,35 @@ public class Triggers {
         }
     }
 
-    public class TriggerProp {
-        @TestVisible
-        public Boolean isExecuting { get; private set; }
-        @TestVisible
-        public Boolean isBefore { get; private set; }
-        @TestVisible
-        public Boolean isAfter { get; private set; }
-        @TestVisible
-        public Boolean isInsert { get; private set; }
-        @TestVisible
-        public Boolean isUpdate { get; private set; }
-        @TestVisible
-        public Boolean isDelete { get; private set; }
-        @TestVisible
-        public Boolean isUndelete { get; private set; }
-        @TestVisible
-        public List<SObject> oldList { get; private set; }
-        @TestVisible
-        public Map<Id, SObject> oldMap { get; private set; }
-        @TestVisible
-        public List<SObject> newList { get; private set; }
-        @TestVisible
-        public Map<Id, SObject> newMap { get; private set; }
-        @TestVisible
-        public TriggerOperation operationType { get; private set; }
-        @TestVisible
-        public Integer size { get; private set; }
-
-        @TestVisible
-        private TriggerProp() {
-            this.isExecuting = Trigger.isExecuting;
-            this.isBefore = Trigger.isBefore;
-            this.isAfter = Trigger.isAfter;
-            this.isInsert = Trigger.isInsert;
-            this.isUpdate = Trigger.isUpdate;
-            this.isDelete = Trigger.isDelete;
-            this.isUndelete = Trigger.isUndelete;
-            this.oldList = Trigger.old;
-            this.oldMap = Trigger.oldMap;
-            this.newList = Trigger.old;
-            this.newMap = Trigger.newMap;
-            this.operationType = Trigger.operationType;
-            this.size = Trigger.size;
-        }
-    }
-
     public interface Handler {
-        Boolean criteria(Context context, Helper helper);
+        Boolean criteria(Props props, Context context);
     }
 
     public interface BeforeInsert {
-        void beforeInsert(Context context, Helper helper);
+        void beforeInsert(Props props, Context context);
     }
 
     public interface AfterInsert {
-        void afterInsert(Context context, Helper helper);
+        void afterInsert(Props props, Context context);
     }
 
     public interface BeforeUpdate {
-        void beforeUpdate(Context context, Helper helper);
+        void beforeUpdate(Props props, Context context);
     }
 
     public interface AfterUpdate {
-        void afterUpdate(Context context, Helper helper);
+        void afterUpdate(Props props, Context context);
     }
 
     public interface BeforeDelete {
-        void beforeDelete(Context context, Helper helper);
+        void beforeDelete(Props props, Context context);
     }
 
     public interface AfterDelete {
-        void afterDelete(Context context, Helper helper);
+        void afterDelete(Props props, Context context);
     }
 
     public interface AfterUndelete {
-        void afterUndelete(Context context, Helper helper);
+        void afterUndelete(Props props, Context context);
     }
 }

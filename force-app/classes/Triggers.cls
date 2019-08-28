@@ -7,8 +7,8 @@ public class Triggers {
     }
 
     public class Manager {
-        public Props props { get; private set; }
-        public Context context { get; private set; }
+        public final Props props { get; private set; }
+        public final Context context { get; private set; }
 
         Boolean canBind = false;
 
@@ -143,16 +143,16 @@ public class Triggers {
     public class Context {
         public final Map<String, Object> state { get; private set; }
         public final Skips skips { get; private set; }
-        private Props props = null;
+        public final Props props { get; private set; }
 
         private final List<Handler> handlers = new List<Handler>();
         private Integer currIndex = -1;
         private Boolean isExecutingCriteria = false;
 
         private Context(Props props) {
+            this.props = props;
             this.state = new Map<String, Object>();
             this.skips = Triggers.skips;
-            this.props = props;
         }
 
         private void reset() {
@@ -186,29 +186,29 @@ public class Triggers {
             this.currIndex++;
             Handler handler = this.handlers[this.currIndex];
             this.isExecutingCriteria = true;
-            if (!this.skips.contains(handler) && handler.criteria(this.props, this) == true) {
+            if (!this.skips.contains(handler) && handler.criteria(this) == true) {
                 this.isExecutingCriteria = false;
                 switch on this.props.operationType {
                     when BEFORE_INSERT {
-                        ((BeforeInsert)handler).beforeInsert(this.props, this);
+                        ((BeforeInsert)handler).beforeInsert(this);
                     }
                     when AFTER_INSERT {
-                        ((AfterInsert)handler).afterInsert(this.props, this);
+                        ((AfterInsert)handler).afterInsert(this);
                     }
                     when BEFORE_UPDATE {
-                        ((BeforeUpdate)handler).beforeUpdate(this.props, this);
+                        ((BeforeUpdate)handler).beforeUpdate(this);
                     }
                     when AFTER_UPDATE {
-                        ((AfterUpdate)handler).afterUpdate(this.props, this);
+                        ((AfterUpdate)handler).afterUpdate(this);
                     }
                     when BEFORE_DELETE {
-                        ((BeforeDelete)handler).beforeDelete(this.props, this);
+                        ((BeforeDelete)handler).beforeDelete(this);
                     }
                     when AFTER_DELETE {
-                        ((AfterDelete)handler).afterDelete(this.props, this);
+                        ((AfterDelete)handler).afterDelete(this);
                     }
                     when AFTER_UNDELETE {
-                        ((AfterUndelete)handler).afterUndelete(this.props, this);
+                        ((AfterUndelete)handler).afterUndelete(this);
                     }
                     when else {
                     }
@@ -388,34 +388,34 @@ public class Triggers {
     }
 
     public interface Handler {
-        Boolean criteria(Props props, Context context);
+        Boolean criteria(Context context);
     }
 
     public interface BeforeInsert {
-        void beforeInsert(Props props, Context context);
+        void beforeInsert(Context context);
     }
 
     public interface AfterInsert {
-        void afterInsert(Props props, Context context);
+        void afterInsert(Context context);
     }
 
     public interface BeforeUpdate {
-        void beforeUpdate(Props props, Context context);
+        void beforeUpdate(Context context);
     }
 
     public interface AfterUpdate {
-        void afterUpdate(Props props, Context context);
+        void afterUpdate(Context context);
     }
 
     public interface BeforeDelete {
-        void beforeDelete(Props props, Context context);
+        void beforeDelete(Context context);
     }
 
     public interface AfterDelete {
-        void afterDelete(Props props, Context context);
+        void afterDelete(Context context);
     }
 
     public interface AfterUndelete {
-        void afterUndelete(Props props, Context context);
+        void afterUndelete(Context context);
     }
 }

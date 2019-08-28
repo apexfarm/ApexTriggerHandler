@@ -16,11 +16,11 @@ To create a trigger handler, you will need to create a class that implements the
 
 ```java
 public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
-    public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+    public Boolean criteria(Triggers.Context context) {
         return true;
     }
 
-    public void beforeUpdate(Triggers.Props props, Triggers.Helper helper) {
+    public void beforeUpdate(Triggers.Helper helper) {
         // do stuff
     }
 }
@@ -58,27 +58,27 @@ public class MyAccountHandler implements Triggers.Handler,
     // 2. There is a "criteria" stage before any handler execution. This gives
     // developers chances to turn on and off the handlers according to
     // configurations at run time.
-    public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+    public Boolean criteria(Triggers.Context context) {
         return Triggers.WHEN_ALWAYS;
 
         // 3. There are also helper methods to check if certain fields have changes
-        // return props.isChangedAny(Account.Name, Account.Description);
-        // return props.isChangedAll(Account.Name, Account.Description);
+        // return context.props.isChangedAny(Account.Name, Account.Description);
+        // return context.props.isChangedAll(Account.Name, Account.Description);
     }
 
-    public void beforeUpdate(Triggers.Props props, Triggers.Context context) {
-        then(props, context);
+    public void beforeUpdate(Triggers.Context context) {
+        then(context);
     }
 
-    public void afterUpdate(Triggers.Props props, Triggers.Context context) {
-        then(props, context);
+    public void afterUpdate(Triggers.Context context) {
+        then(context);
     }
 
-    private void then(Triggers.Props props, Triggers.Context context) {
-        // 4. All properties on Trigger have been exposed to props.
+    private void then(Triggers.Context context) {
+        // 4. All properties on Trigger have been exposed to context.props.
       	// Direct reference of Trigger.old and Trigger.new can be avoided,
-        // instead use props.oldList and props.newList.
-        if (props.isUpdate) {
+        // instead use context.props.oldList and context.props.newList.
+        if (context.props.isUpdate) {
 
           // 5. Use context.state to pass query or computation results down to all
           // following handlers within the current trigger context, i.e. before update.
@@ -126,7 +126,7 @@ Or you can skip the handler during batch execution in the criteria phase:
 
 ```java
 public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate {
-    public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+    public Boolean criteria(Triggers.Context context) {
         return !System.isBatch();
     }
     ...
@@ -137,29 +137,30 @@ public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate
 
 ### Trigger Handler Interfaces
 
-| Interface               | Method to Implement                                          |
-| ----------------------- | ------------------------------------------------------------ |
-| Triggers.Handler        | `Boolean criteria(Triggers.Props props, Triggers.Context context);` |
-| Triggers.BeforeInsert   | `void beforeInsert(Triggers.Props props, Triggers.Context context);` |
-| Triggers.AfterInsert    | `void afterInsert(Triggers.Props props, Triggers.Context context);` |
-| Triggers.BeforeUpdate   | `void beforeUpdate(Triggers.Props props, Triggers.Context context);` |
-| Triggers.AfterUpdate    | `void afterUpdate(Triggers.Props props, Triggers.Context context);` |
-| Triggers.BeforeDelete   | `void beforeDelete(Triggers.Props props, Triggers.Context context);` |
-| Triggers.AfterDelete    | `void afterDelete(Triggers.Props props, Triggers.Context context);` |
-| Triggers.BeforeUndelete | `void afterUndelete(Triggers.Props props, Triggers.Context context);` |
+| Interface               | Method to Implement                             |
+| ----------------------- | ----------------------------------------------- |
+| Triggers.Handler        | `Boolean criteria(Triggers.Context context);`   |
+| Triggers.BeforeInsert   | `void beforeInsert(Triggers.Context context);`  |
+| Triggers.AfterInsert    | `void afterInsert(Triggers.Context context);`   |
+| Triggers.BeforeUpdate   | `void beforeUpdate(Triggers.Context context);`  |
+| Triggers.AfterUpdate    | `void afterUpdate(Triggers.Context context);`   |
+| Triggers.BeforeDelete   | `void beforeDelete(Triggers.Context context);`  |
+| Triggers.AfterDelete    | `void afterDelete(Triggers.Context context);`   |
+| Triggers.BeforeUndelete | `void afterUndelete(Triggers.Context context);` |
 
-### Trigger Context
+### Triggers.Context
 
-| Property/Method     | Description                                                  |
-| ------------------- | ------------------------------------------------------------ |
-| context.state       | A `Map<String, Object>` provided for developers to pass any value down to other handlers. |
-| context.skips       | A Set wrapper to store handler names to be skipped. You can call `context.skips.add()`, `context.skips.remove()`, `context.skips.clear()` `context.skips.contains()` etc. The passed-in handlers could be trigger handlers of different sObject triggers. |
-| context.next()      | Call the next handler.                                       |
-| context.stop()      | Stop execute any following handlers. A bit like the the stop in process builders. |
+| Property/Method | Type                | Description                                                  |
+| --------------- | ------------------- | ------------------------------------------------------------ |
+| context.props   | Triggers.Props      | All properties on Trigger are exposed by this class. In addition there are frequently used helper methods and a convinient sObjectType property, in case reflection is needed . |
+| context.state   | Map<String, Object> | A map provided for developers to pass any value down to other handlers. |
+| context.skips   | Triggers.Skips      | A Set wrapper to store handler names to be skipped. You can call `context.skips.add()`, `context.skips.remove()`, `context.skips.clear()` `context.skips.contains()` etc. The passed-in handlers could be trigger handlers of different sObject triggers. |
+| context.next()  | void                | Call the next handler.                                       |
+| context.stop()  | void                | Stop execute any following handlers. A bit like the the stop in process builders. |
 
-### Trigger Props
+### Triggers.Props
 
-All properties on Trigger are exposed by this class, and they are readonly too. In addition there is a convinient sObjectType property, in cases where reflection is needed.
+#### Properties
 
 | Property            | Type               | Description                                        |
 | ------------------- | ------------------ | -------------------------------------------------- |
@@ -178,14 +179,14 @@ All properties on Trigger are exposed by this class, and they are readonly too. 
 | props.operationType | TriggerOperation   | Trigger.operationType                              |
 | props.size          | Integer            | Trigger.size                                       |
 
-There are also frequently used custom helper methods, each has several overloads.
+#### Methods
 
 | Method                                                       | Type      | Description                                                  |
 | ------------------------------------------------------------ | --------- | ------------------------------------------------------------ |
 | - `isChanged(SObjectField field1)`                           | Boolean   | Check if any record has a field changed during an update.    |
 | - `isChangedAny(SObjectField field1, SObjectField field2)`<br>- `isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAny(List<SObjectField> fields)` | Boolean   | Check if any record has multiple fields changed during an update. Return true if any specified field is changed. |
 | - `isChangedAll(SObjectField field1, SObjectField field2)`<br>- `isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAll(List<SObjectField> fields)` | Boolean   | Check if any record has multiple fields changed during an update. Return true only if all specified fields are changed. |
-| - filterChanged(SObjectField field1)                         | Set\<Id\> | Filter IDs of records have a field changed during an update. |
+| - `filterChanged(SObjectField field1)`                       | Set\<Id\> | Filter IDs of records have a field changed during an update. |
 | - `filterChangedAny(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAny(List<SObjectField> fields)` | Set\<Id\> | Filter IDs of records have mulantiple fields changed during an update. Return IDs if any specified field is changed. |
 | - `filterChangedAll(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAll(List<SObjectField> fields)` | Set\<Id\> | Filter IDs of records have mulantiple fields changed during an update. Return IDs only if all specified fields are changed. |
 

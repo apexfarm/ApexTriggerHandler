@@ -5,12 +5,12 @@ private with sharing class TriggersTest {
     class FirstHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             context.next(); // negative case, shouldn't do this
             return Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             if (context.state.get('counter') == null) {
                 context.state.put('counter', 0);
             }
@@ -19,213 +19,213 @@ private with sharing class TriggersTest {
             System.assertEquals(4, context.state.get('counter'));
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterInsert(Triggers.Context context) {
+            then(context);
         }
 
-        public void beforeUpdate(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeUpdate(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterUpdate(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterUpdate(Triggers.Context context) {
+            then(context);
         }
 
-        public void beforeDelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeDelete(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterDelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterDelete(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterUndelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterUndelete(Triggers.Context context) {
+            then(context);
         }
     }
 
     class MainHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             context.state.put('counter', (Integer)context.state.get('counter') + 1);
             context.next();
             context.state.put('counter', (Integer)context.state.get('counter') + 1);
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterInsert(Triggers.Context context) {
+            then(context);
         }
 
-        public void beforeUpdate(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeUpdate(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterUpdate(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterUpdate(Triggers.Context context) {
+            then(context);
         }
 
-        public void beforeDelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeDelete(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterDelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterDelete(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterUndelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterUndelete(Triggers.Context context) {
+            then(context);
         }
     }
 
     class StopHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             context.stop();
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
     }
 
     class InactateHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             context.next(); // shouldn't work in when method
             return !Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             context.state.put('counter', (Integer)context.state.get('counter') + 1);
             context.next();
             context.state.put('counter', (Integer)context.state.get('counter') + 1);
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
     }
 
     class AddSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             return Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             context.skips.add(SkipHandler.class);
             context.next();
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
     }
 
     class RemoveSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             return Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             if (context.skips.contains(SkipHandler.class)) {
                 context.skips.remove(SkipHandler.class);
             }
             context.next();
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
     }
 
     class ClearSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             return Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             context.skips.clear();
             context.next();
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
     }
 
     class SkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             return Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             context.state.put('counter', (Integer)context.state.get('counter') + 1);
             context.next();
             context.state.put('counter', (Integer)context.state.get('counter') + 1);
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
     }
 
     class LastHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Props props, Triggers.Context context) {
+        public Boolean criteria(Triggers.Context context) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
 
-        private void then(Triggers.Props props, Triggers.Context context) {
+        private void then(Triggers.Context context) {
             System.assertEquals(2, context.state.get('counter'));
             context.next();
             System.assertEquals(2, context.state.get('counter'));
         }
 
-        public void beforeInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterInsert(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterInsert(Triggers.Context context) {
+            then(context);
         }
 
-        public void beforeUpdate(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeUpdate(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterUpdate(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterUpdate(Triggers.Context context) {
+            then(context);
         }
 
-        public void beforeDelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void beforeDelete(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterDelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterDelete(Triggers.Context context) {
+            then(context);
         }
 
-        public void afterUndelete(Triggers.Props props, Triggers.Context context) {
-            then(props, context);
+        public void afterUndelete(Triggers.Context context) {
+            then(context);
         }
     }
     // #endregion

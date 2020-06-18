@@ -205,4 +205,4 @@ public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate
 
 ## License
 
-MIT License
+BSD 3-Clause License

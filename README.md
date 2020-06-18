@@ -1,6 +1,6 @@
 # Apex Trigger Handler
 
-![](https://img.shields.io/badge/version-1.1.0-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![](https://img.shields.io/badge/version-1.1.1-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
 
 There are already many trigger handler libraries out there, but this one has some different approaches or advantanges such as state sharing, built in helper methods etc.. Just one class `Triggers.cls` with its corresponding test class `TriggersTest.cls`, and its minimal and simple.
 
@@ -51,8 +51,8 @@ Please check the comments below for detailed explanations and tricks to customiz
 // 1. Use interfaces instead of a base class to extend a custom handler. With interface
 // approach we can declare only the needed interfaces explicitly, which is much cleaner
 // and clearer.
-public class MyAccountHandler implements Triggers.Handler, 
-                                         Triggers.BeforeUpdate, 
+public class MyAccountHandler implements Triggers.Handler,
+                                         Triggers.BeforeUpdate,
                                          Triggers.AfterUpdate {
 
     // 2. There is a "criteria" stage before any handler execution. This gives
@@ -80,27 +80,30 @@ public class MyAccountHandler implements Triggers.Handler,
         // instead use context.props.oldList and context.props.newList.
         if (context.props.isUpdate) {
 
-          // 5. Use context.state to pass query or computation results down to all
-          // following handlers within the current trigger context, i.e. before update.
-          if (context.state.get('counter') == null) {
-              context.state.put('counter', 0);
-          }
+            // 5. Use context.state to pass query or computation results down to all
+            // following handlers within the current trigger context, i.e. before update.
+            Integer counter = (Integer)context.state.get('counter');
+            if (counter == null) {
+                context.state.put('counter', 0);
+            } else {
+                context.state.put('counter', counter + 1);
+            }
 
-          // 6. Use context.skips or Triggers.skips to prevent specific handlers from
-          // execution. Please do remember restore the handler when appropriate.
-          context.skips.add(ContactHandler.class);
-          List<Contact> contacts = ...;
-          Database.insert(contacts);
-          context.skips.remove(ContactHandler.class);
+            // 6. Use context.skips or Triggers.skips to prevent specific handlers from
+            // execution. Please do remember restore the handler when appropriate.
+            context.skips.add(ContactHandler.class);
+            List<Contact> contacts = ...;
+            Database.insert(contacts);
+            context.skips.remove(ContactHandler.class);
 
-          // 7-1. Call context.next() to execute the next handler. It is optional to use,
-          // unless some following up logics need to be performed after all following
-          // handlers finished.
-          context.next();
+            // 7-1. Call context.next() to execute the next handler. It is optional to use,
+            // unless some following up logics need to be performed after all following
+            // handlers finished.
+            context.next();
 
-          // 7-2. If context.stop() is called instead of context.next(), any following
-          // handlers won't be executed, just like the STOP in process builder.
-          context.stop();
+            // 7-2. If context.stop() is called instead of context.next(), any following
+            // handlers won't be executed, just like the STOP in process builder.
+            context.stop();
         }
     }
 }
@@ -162,30 +165,40 @@ public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate
 
 #### Properties
 
-| Property            | Type               | Description                                        |
-| ------------------- | ------------------ | -------------------------------------------------- |
-| sObjectType         | SObjectType        | The current sObjectType the trigger is running on. |
-| isExecuting         | Boolean            | Trigger.isExecuting                                |
-| isBefore            | Boolean            | Trigger.isBefore                                   |
-| isAfter             | Boolean            | Trigger.isAfter                                    |
-| isInsert            | Boolean            | Trigger.isInsert                                   |
-| isUpdate            | Boolean            | Trigger.isUpdate                                   |
-| isDelete            | Boolean            | Trigger.isDelete                                   |
-| isUndelete          | Boolean            | Trigger.isUndelete                                 |
-| oldList             | List\<SObject\>    | Trigger.old                                        |
-| oldMap              | Map\<Id, SObject\> | Trigger.oldMap                                     |
-| newList             | List\<SObject\>    | Trigger.new                                        |
-| newMap              | Map\<Id, SObject\> | Trigger.newMap                                     |
-| operationType       | TriggerOperation   | Trigger.operationType                              |
-| size                | Integer            | Trigger.size                                       |
+| Property      | Type               | Description              |
+| ------------- | ------------------ | ------------------------ |
+| sObjectType   | SObjectType        | The current SObjectType. |
+| isExecuting   | Boolean            | Trigger.isExecuting      |
+| isBefore      | Boolean            | Trigger.isBefore         |
+| isAfter       | Boolean            | Trigger.isAfter          |
+| isInsert      | Boolean            | Trigger.isInsert         |
+| isUpdate      | Boolean            | Trigger.isUpdate         |
+| isDelete      | Boolean            | Trigger.isDelete         |
+| isUndelete    | Boolean            | Trigger.isUndelete       |
+| oldList       | List\<SObject\>    | Trigger.old              |
+| oldMap        | Map\<Id, SObject\> | Trigger.oldMap           |
+| newList       | List\<SObject\>    | Trigger.new              |
+| newMap        | Map\<Id, SObject\> | Trigger.newMap           |
+| operationType | TriggerOperation   | Trigger.operationType    |
+| size          | Integer            | Trigger.size             |
 
 #### Methods
+
+**Note**: the following `isChanged` method has the same behavior has the `ISCHANGED` formula:
+
+> - This function returns `false` when evaluating any field on a newly created record.
+> - If a text field was previously blank, this function returns `true` when it contains any value.
+> - For number, percent, or currency fields, this function returns `true` when:
+>   - The field was blank and now contains any value
+>   - The field was zero and now is blank
+>   - The field was zero and now contains any other value
+>
 
 | Method                                                       | Type      | Description                                                  |
 | ------------------------------------------------------------ | --------- | ------------------------------------------------------------ |
 | - `isChanged(SObjectField field1)`                           | Boolean   | Check if any record has a field changed during an update.    |
-| - `isChangedAny(SObjectField field1, SObjectField field2)`<br>- `isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAny(List<SObjectField> fields)` | Boolean   | Check if any record has multiple fields changed during an update. Return true if any specified field is changed. |
-| - `isChangedAll(SObjectField field1, SObjectField field2)`<br>- `isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAll(List<SObjectField> fields)` | Boolean   | Check if any record has multiple fields changed during an update. Return true only if all specified fields are changed. |
+| - `isChangedAny(SObjectField field1, SObjectField field2)`<br>- `isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAny(List<SObjectField> fields)` | Boolean   | Check if any record has multiple fields changed during an update. Return `true` if any specified field is changed. |
+| - `isChangedAll(SObjectField field1, SObjectField field2)`<br>- `isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAll(List<SObjectField> fields)` | Boolean   | Check if any record has multiple fields changed during an update. Return `true` only if all specified fields are changed. |
 | - `filterChanged(SObjectField field1)`                       | Set\<Id\> | Filter IDs of records have a field changed during an update. |
 | - `filterChangedAny(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAny(List<SObjectField> fields)` | Set\<Id\> | Filter IDs of records have mulantiple fields changed during an update. Return IDs if any specified field is changed. |
 | - `filterChangedAll(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAll(List<SObjectField> fields)` | Set\<Id\> | Filter IDs of records have mulantiple fields changed during an update. Return IDs only if all specified fields are changed. |

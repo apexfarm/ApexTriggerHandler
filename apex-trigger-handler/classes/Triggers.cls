@@ -1,3 +1,35 @@
+/**
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2020, Jianfeng Jin
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 public class Triggers {
     public static final Boolean WHEN_ALWAYS = true;
     public static final Skips skips = new Skips();
@@ -60,33 +92,33 @@ public class Triggers {
 
         public Manager bind(Handler handler) {
             if (canBind) {
-                Boolean isImplementation = false;
+                Boolean isImplemented = false;
                 switch on props.operationType {
                     when BEFORE_INSERT {
-                        isImplementation = handler instanceOf BeforeInsert;
+                        isImplemented = handler instanceOf BeforeInsert;
                     }
                     when AFTER_INSERT {
-                        isImplementation = handler instanceOf AfterInsert;
+                        isImplemented = handler instanceOf AfterInsert;
                     }
                     when BEFORE_UPDATE {
-                        isImplementation = handler instanceOf BeforeUpdate;
+                        isImplemented = handler instanceOf BeforeUpdate;
                     }
                     when AFTER_UPDATE {
-                        isImplementation = handler instanceOf AfterUpdate;
+                        isImplemented = handler instanceOf AfterUpdate;
                     }
                     when BEFORE_DELETE {
-                        isImplementation = handler instanceOf BeforeDelete;
+                        isImplemented = handler instanceOf BeforeDelete;
                     }
                     when AFTER_DELETE {
-                        isImplementation = handler instanceOf AfterDelete;
+                        isImplemented = handler instanceOf AfterDelete;
                     }
                     when AFTER_UNDELETE {
-                        isImplementation = handler instanceOf AfterUndelete;
+                        isImplemented = handler instanceOf AfterUndelete;
                     }
                     when else {
                     }
                 }
-                if (isImplementation) {
+                if (isImplemented) {
                     context.handlers.add(handler);
                 }
             }
@@ -159,15 +191,16 @@ public class Triggers {
             this.currIndex = -1;
         }
 
-        private Boolean hasNext() {
-            return this.currIndex < this.handlers.size() - 1;
-        }
-
         public void stop() {
             this.currIndex = this.handlers.size();
         }
 
+        private Boolean hasNext() {
+            return this.currIndex < this.handlers.size() - 1;
+        }
+
         public void next() {
+            // prevent calling context.next() in criteria phase
             if (!this.isExecutingCriteria) {
                 while (hasNext()) {
                     runNext();
@@ -289,9 +322,8 @@ public class Triggers {
                 objects = this.oldList;
             }
 
-            String fieldName = field.getDescribe().getName();
             for (SObject obj : objects) {
-				values.add(obj.get(fieldName));
+				values.add(obj.get(field));
             }
             return values;
         }
@@ -299,9 +331,8 @@ public class Triggers {
         @TestVisible
         private Boolean isChanged(Id objectId, SObjectField field) {
             if (this.isUpdate) {
-                String fieldName = field.getDescribe().getName();
-                Object oldValue = this.oldMap.get(objectId).get(fieldName);
-                Object newValue = this.newMap.get(objectId).get(fieldName);
+                Object oldValue = this.oldMap.get(objectId).get(field);
+                Object newValue = this.newMap.get(objectId).get(field);
                 return oldValue != newValue;
             }
             return false;

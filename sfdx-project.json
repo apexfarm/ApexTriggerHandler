@@ -1,11 +1,11 @@
 {
   "packageDirectories": [
     {
-      "path": "force-app",
+      "path": "apex-trigger-handler",
       "default": true
     }
   ],
   "namespace": "",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "46.0"
+  "sourceApiVersion": "48.0"
 }

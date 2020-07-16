@@ -31,251 +31,38 @@
  */
 
 @IsTest
-private with sharing class TriggersTest {
-
-    // #region Test Handler Impls
-    class FirstHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
-        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
-        Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Context context) {
-            context.next(); // negative case, shouldn't do this
-            return Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            if (context.state.get('counter') == null) {
-                context.state.put('counter', 0);
-            }
-            System.assertEquals(0, context.state.get('counter'));
-            context.next();
-            System.assertEquals(4, context.state.get('counter'));
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterInsert(Triggers.Context context) {
-            then(context);
-        }
-
-        public void beforeUpdate(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterUpdate(Triggers.Context context) {
-            then(context);
-        }
-
-        public void beforeDelete(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterDelete(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterUndelete(Triggers.Context context) {
-            then(context);
-        }
+public with sharing class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
+    public static String getFakeId(Schema.SObjectType objectType, Integer index) {
+        return objectType.getDescribe().getKeyPrefix()
+            + '000zzzz' // start from a large Id to avoid confliction during unit test.
+            + String.valueOf(index).leftPad(5, '0');
     }
 
-    class MainHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
-        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
-        Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Context context) {
-            context.next(); // shouldn't work in when method
-            return Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
-            context.next();
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterInsert(Triggers.Context context) {
-            then(context);
-        }
-
-        public void beforeUpdate(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterUpdate(Triggers.Context context) {
-            then(context);
-        }
-
-        public void beforeDelete(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterDelete(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterUndelete(Triggers.Context context) {
-            then(context);
-        }
-    }
-
-    class StopHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
-            context.next(); // shouldn't work in when method
-            return Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            context.stop();
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-    }
-
-    class InactateHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
-            context.next(); // shouldn't work in when method
-            return !Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
-            context.next();
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-    }
-
-    class AddSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
-            return Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            context.skips.add(SkipHandler.class);
-            context.next();
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-    }
-
-    class RemoveSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
-            return Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            if (context.skips.contains(SkipHandler.class)) {
-                context.skips.remove(SkipHandler.class);
-            }
-            context.next();
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-    }
-
-    class ClearSkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
-            return Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            context.skips.clear();
-            context.next();
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-    }
-
-    class SkipHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
-            return Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
-            context.next();
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-    }
-
-    class LastHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
-        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
-        Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Context context) {
-            context.next(); // shouldn't work in when method
-            return Triggers.WHEN_ALWAYS;
-        }
-
-        private void then(Triggers.Context context) {
-            System.assertEquals(2, context.state.get('counter'));
-            context.next();
-            System.assertEquals(2, context.state.get('counter'));
-        }
-
-        public void beforeInsert(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterInsert(Triggers.Context context) {
-            then(context);
-        }
-
-        public void beforeUpdate(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterUpdate(Triggers.Context context) {
-            then(context);
-        }
-
-        public void beforeDelete(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterDelete(Triggers.Context context) {
-            then(context);
-        }
-
-        public void afterUndelete(Triggers.Context context) {
-            then(context);
-        }
-    }
-    // #endregion
-
-    @TestSetup
-    static void makeData(){
-        insert new List<Account> {
-            new Account(Name = 'Account 1', Description = 'Account 1', BillingCity = 'New York'),
-            new Account(Name = 'Account 2', Description = 'Account 2', BillingCity = 'New York'),
-            new Account(Name = 'Account 3', Description = 'Account 3', BillingCity = 'New York')
+    static List<Account> createAccounts() {
+        return new List<Account> {
+            new Account(Id = getFakeId(Account.SObjectType, 1), Name = 'Account 1', Description = 'Account 1', BillingCity = 'New York'),
+            new Account(Id = getFakeId(Account.SObjectType, 2), Name = 'Account 2', Description = 'Account 2', BillingCity = 'New York'),
+            new Account(Id = getFakeId(Account.SObjectType, 3), Name = 'Account 3', Description = 'Account 3', BillingCity = 'New York')
         };
     }
 
     @IsTest
     static void testSkips_getHandlerName_ByType() {
         Triggers.Skips skips = new Triggers.Skips();
-        String className = skips.getHandlerName(String.class);
-        System.assertEquals('String', className);
+        skips.add(String.class);
+        System.assertEquals(true, skips.contains(String.class));
+
+        skips.remove(String.class);
+        System.assertEquals(0, skips.skippedHandlers.size());
+
+        skips.add(TriggersTest.TriggersTest.class);
+        System.assertEquals(true, skips.contains(TriggersTest.class));
+
+        skips.clear();
+        System.assertEquals(0, skips.skippedHandlers.size());
+
+        skips.add(TriggersTest.class);
+        System.assertEquals(true, skips.contains(new TriggersTest()));
     }
 
     @IsTest
@@ -303,23 +90,40 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_Stop_BeforeInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = true;
-        triggerManager.props.isAfter = false;
-        triggerManager.props.isInsert = true;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.BEFORE_INSERT;
+        Triggers.Manager triggerManager = Triggers.prepare(
+            TriggerOperation.BEFORE_INSERT, new List<Account>(), new List<Account>());
+        triggerManager.beforeInsert()
+            .bind(new FirstHandler())
+            .bind(new MainHandler())
+            .bind(new MainHandler())
+            .bind(new StopHandler())
+            .bind(new MainHandler())
+            .bind(new LastHandler())
+        .execute();
 
-        triggerManager
-            .beforeInsert()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new MainHandler())
-                .bind(new StopHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+        System.assertEquals(4, triggerManager.context.state.get('counter'));
+    }
+
+    @IsTest
+    static void testBinding_Stop_AfterInsert() {
+        Triggers.Manager triggerManager = Triggers.prepare(
+            TriggerOperation.AFTER_INSERT, new List<Account> {
+                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1)),
+                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2)),
+                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3))
+            }, new List<Account> {
+                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1)),
+                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2)),
+                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3))
+            });
+
+        triggerManager.afterInsert()
+            .bind(new FirstHandler())
+            .bind(new MainHandler())
+            .bind(new MainHandler())
+            .bind(new StopHandler())
+            .bind(new MainHandler())
+            .bind(new LastHandler())
         .execute();
 
         System.assertEquals(4, triggerManager.context.state.get('counter'));
@@ -327,71 +131,45 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_Inactive_BeforeInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = true;
-        triggerManager.props.isAfter = false;
-        triggerManager.props.isInsert = true;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.BEFORE_INSERT;
-
-        triggerManager
-            .beforeInsert()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new InactateHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
+        triggerManager.beforeInsert()
+            .bind(new FirstHandler())
+            .bind(new MainHandler())
+            .bind(new InactiveHandler())
+            .bind(new MainHandler())
+            .bind(new LastHandler())
         .execute();
 
         System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
-    static void testBinding_Skip_BeforeInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = true;
-        triggerManager.props.isAfter = false;
-        triggerManager.props.isInsert = true;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.BEFORE_INSERT;
-
-        triggerManager
-            .beforeInsert()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new AddSkipHandler())
-                .bind(new SkipHandler())
-                .bind(new RemoveSkipHandler())
-                .bind(new SkipHandler())
-                .bind(new LastHandler())
+    static void testBinding_Skip_Remove() {
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
+        triggerManager.beforeInsert()
+            .bind(new FirstHandler())
+            .bind(new MainHandler())
+            .bind(new AddSkippedHandler())
+            .bind(new TriggersTest())
+            .bind(new RemoveSkippedHandler())
+            .bind(new TriggersTest())
+            .bind(new LastHandler())
         .execute();
 
         System.assertEquals(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
-    static void testBinding_Clear_BeforeInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = true;
-        triggerManager.props.isAfter = false;
-        triggerManager.props.isInsert = true;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.BEFORE_INSERT;
-
+    static void testBinding_Skip_Clear() {
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
         triggerManager
             .beforeInsert()
                 .bind(new FirstHandler())
                 .bind(new MainHandler())
-                .bind(new AddSkipHandler())
-                .bind(new SkipHandler())
-                .bind(new ClearSkipHandler())
-                .bind(new SkipHandler())
+                .bind(new AddSkippedHandler())
+                .bind(new TriggersTest())
+                .bind(new ClearSkippedHandler())
+                .bind(new TriggersTest())
                 .bind(new LastHandler())
         .execute();
 
@@ -401,15 +179,7 @@ private with sharing class TriggersTest {
     // #region Test State
     @IsTest
     static void testBinding_State_BeforeInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = true;
-        triggerManager.props.isAfter = false;
-        triggerManager.props.isInsert = true;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.BEFORE_INSERT;
-
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
         triggerManager
             .beforeInsert()
                 .bind(new FirstHandler())
@@ -423,15 +193,7 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_State_AfterInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = false;
-        triggerManager.props.isAfter = true;
-        triggerManager.props.isInsert = true;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.AFTER_INSERT;
-
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.AFTER_INSERT, null, null);
         triggerManager
             .afterInsert()
                 .bind(new FirstHandler())
@@ -445,15 +207,8 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_State_BeforeUpdate() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = true;
-        triggerManager.props.isAfter = false;
-        triggerManager.props.isInsert = false;
-        triggerManager.props.isUpdate = true;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.BEFORE_UPDATE;
-
+        Triggers.Manager triggerManager = Triggers.prepare(
+            TriggerOperation.BEFORE_UPDATE, new List<Account>(), new List<Account>());
         triggerManager
             .beforeUpdate()
                 .bind(new FirstHandler())
@@ -467,15 +222,7 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_State_AfterUpdate() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = false;
-        triggerManager.props.isAfter = true;
-        triggerManager.props.isInsert = false;
-        triggerManager.props.isUpdate = true;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.AFTER_UPDATE;
-
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.AFTER_UPDATE, null, null);
         triggerManager
             .afterUpdate()
                 .bind(new FirstHandler())
@@ -489,15 +236,7 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_State_BeforeDelete() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = true;
-        triggerManager.props.isAfter = false;
-        triggerManager.props.isInsert = false;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = true;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.BEFORE_DELETE;
-
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.BEFORE_DELETE, null, null);
         triggerManager
             .beforeDelete()
                 .bind(new FirstHandler())
@@ -511,15 +250,7 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_State_AfterDelete() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = false;
-        triggerManager.props.isAfter = true;
-        triggerManager.props.isInsert = false;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = true;
-        triggerManager.props.isUndelete = false;
-        triggerManager.props.operationType = TriggerOperation.AFTER_DELETE;
-
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.AFTER_DELETE, null, null);
         triggerManager
             .afterDelete()
                 .bind(new FirstHandler())
@@ -533,15 +264,7 @@ private with sharing class TriggersTest {
 
     @IsTest
     static void testBinding_State_AfterUndelete() {
-        Triggers.Manager triggerManager = Triggers.prepare();
-        triggerManager.props.isBefore = false;
-        triggerManager.props.isAfter = true;
-        triggerManager.props.isInsert = false;
-        triggerManager.props.isUpdate = false;
-        triggerManager.props.isDelete = false;
-        triggerManager.props.isUndelete = true;
-        triggerManager.props.operationType = TriggerOperation.AFTER_UNDELETE;
-
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.AFTER_UNDELETE, null, null);
         triggerManager
             .afterUndelete()
                 .bind(new FirstHandler())
@@ -563,7 +286,7 @@ private with sharing class TriggersTest {
         props.isDelete = false;
         props.isUndelete = false;
 
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.newList = accounts;
         props.newMap = new Map<Id, Account>(accounts);
 
@@ -620,7 +343,7 @@ private with sharing class TriggersTest {
         props.isDelete = false;
         props.isUndelete = false;
 
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         props.newList = accounts;
@@ -640,7 +363,7 @@ private with sharing class TriggersTest {
         props.isUpdate = true;
         props.isDelete = false;
         props.isUndelete = false;
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         List<Account> newAccounts = accounts.deepClone();
@@ -668,7 +391,7 @@ private with sharing class TriggersTest {
         props.isDelete = false;
         props.isUndelete = false;
 
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         props.newList = accounts;
@@ -688,7 +411,7 @@ private with sharing class TriggersTest {
         props.isUpdate = true;
         props.isDelete = false;
         props.isUndelete = false;
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         List<Account> newAccounts = accounts.deepClone();
@@ -714,7 +437,7 @@ private with sharing class TriggersTest {
         props.isUpdate = true;
         props.isDelete = false;
         props.isUndelete = false;
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         List<Account> newAccounts = accounts.deepClone();
@@ -742,7 +465,7 @@ private with sharing class TriggersTest {
         props.isDelete = false;
         props.isUndelete = false;
 
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         props.newList = accounts;
@@ -762,7 +485,7 @@ private with sharing class TriggersTest {
         props.isUpdate = true;
         props.isDelete = false;
         props.isUndelete = false;
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         List<Account> newAccounts = accounts.deepClone();
@@ -790,7 +513,7 @@ private with sharing class TriggersTest {
         props.isUpdate = true;
         props.isDelete = false;
         props.isUndelete = false;
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         List<Account> newAccounts = accounts.deepClone();
@@ -816,7 +539,7 @@ private with sharing class TriggersTest {
         props.isUpdate = true;
         props.isDelete = false;
         props.isUndelete = false;
-        List<Account> accounts = [SELECT Id, Name, Description, BillingCity FROM Account Limit 3];
+        List<Account> accounts = createAccounts();
         props.oldList = accounts;
         props.oldMap = new Map<Id, Account>(accounts);
         List<Account> newAccounts = accounts.deepClone();
@@ -838,6 +561,238 @@ private with sharing class TriggersTest {
 
         System.assertEquals(1, changedIds.size());
         System.assertEquals(true, isChanged);
+    }
+    // #endregion
+
+
+    // #region Test Handler Impls
+    // TriggersTest is treated as a handler to be skipped, because inner class cannot be reflected
+    // from an instance back to type properly.
+    public Boolean criteria(Triggers.Context context) {
+        return Triggers.WHEN_ALWAYS;
+    }
+
+    public void beforeInsert(Triggers.Context context) {
+        context.state.put('counter', (Integer)context.state.get('counter') + 1);
+        context.next();
+        context.state.put('counter', (Integer)context.state.get('counter') + 1);
+    }
+
+    public class FirstHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
+        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
+        Triggers.AfterUndelete {
+        public Boolean criteria(Triggers.Context context) {
+            context.next(); // negative case, shouldn't do this
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context) {
+            if (context.state.get('counter') == null) {
+                context.state.put('counter', 0);
+            }
+            System.assertEquals(0, context.state.get('counter'));
+            context.next();
+            System.assertEquals(4, context.state.get('counter'));
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterInsert(Triggers.Context context) {
+            then(context);
+        }
+
+        public void beforeUpdate(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterUpdate(Triggers.Context context) {
+            then(context);
+        }
+
+        public void beforeDelete(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterDelete(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterUndelete(Triggers.Context context) {
+            then(context);
+        }
+    }
+
+    public class MainHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
+        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
+        Triggers.AfterUndelete {
+        public Boolean criteria(Triggers.Context context) {
+            context.next(); // shouldn't work in when method
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context) {
+            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+            context.next();
+            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterInsert(Triggers.Context context) {
+            then(context);
+        }
+
+        public void beforeUpdate(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterUpdate(Triggers.Context context) {
+            then(context);
+        }
+
+        public void beforeDelete(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterDelete(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterUndelete(Triggers.Context context) {
+            then(context);
+        }
+    }
+
+    public class StopHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert {
+        public Boolean criteria(Triggers.Context context) {
+            context.next(); // shouldn't work in when method
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context) {
+            context.stop();
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterInsert(Triggers.Context context) {
+            then(context);
+        }
+    }
+
+    public class InactiveHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context) {
+            context.next(); // negative test, shouldn't work in when method
+            context.next();
+            context.next();
+            return !Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context) {
+            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+            context.next();
+            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
+        }
+    }
+
+    public class AddSkippedHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context) {
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context) {
+            context.skips.add(TriggersTest.class);
+            context.next();
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
+        }
+    }
+
+    public class RemoveSkippedHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context) {
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context) {
+            if (context.skips.contains(TriggersTest.class)) {
+                context.skips.remove(TriggersTest.class);
+            }
+            context.next();
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
+        }
+    }
+
+    public class ClearSkippedHandler implements Triggers.Handler, Triggers.BeforeInsert {
+        public Boolean criteria(Triggers.Context context) {
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context) {
+            context.skips.clear();
+            context.next();
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
+        }
+    }
+
+    public class LastHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
+        Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
+        Triggers.AfterUndelete {
+        public Boolean criteria(Triggers.Context context) {
+            context.next(); // shouldn't work in when method
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        private void then(Triggers.Context context) {
+            System.assertEquals(2, context.state.get('counter'));
+            context.next();
+            System.assertEquals(2, context.state.get('counter'));
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterInsert(Triggers.Context context) {
+            then(context);
+        }
+
+        public void beforeUpdate(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterUpdate(Triggers.Context context) {
+            then(context);
+        }
+
+        public void beforeDelete(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterDelete(Triggers.Context context) {
+            then(context);
+        }
+
+        public void afterUndelete(Triggers.Context context) {
+            then(context);
+        }
     }
     // #endregion
 }

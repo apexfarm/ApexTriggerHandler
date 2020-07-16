@@ -150,12 +150,12 @@ public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate
 The following method is private but `@TestVisible`, it can be used in test methods to supply mock recoreds for old and new lists. So we don't need to perform DMLs to trigger the real triggers.
 
 ```java
-List<Account> oldList = new List<Account> {
+List<SObject> oldList = new List<SObject> {
     new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1), Name = 'Old Name 1'),
     new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2), Name = 'Old Name 2'),
     new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3), Name = 'Old Name 3')}
 
-List<Account> newList = new List<Account> {
+List<SObject> newList = new List<SObject> {
     new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1), Name = 'New Name 1'),
     new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2), Name = 'New Name 2'),
     new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3), Name = 'New Name 3')}

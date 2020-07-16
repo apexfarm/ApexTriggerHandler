@@ -9,7 +9,7 @@ There are already many trigger handler libraries out there, but this one has som
 ### Release 1.1.2
 
 1. Eliminate any DML statements in test class, so the library can be installed in any org.
-2. **[Unit Test Mock](#unit-test-how-to)**: Add a private but `@TestVisible` helper method to mock the handler tests, so we don't need to do any DMLs in order to trigger the handlers.
+2. **[Unit Test How-To](#unit-test-how-to)**: Add a private but `@TestVisible` helper method to mock the handler tests, so we don't need to do any DMLs in order to trigger the handlers.
 
 ------
 

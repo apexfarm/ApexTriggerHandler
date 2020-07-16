@@ -90,8 +90,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
 
     @IsTest
     static void testBinding_Stop_BeforeInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare(
-            TriggerOperation.BEFORE_INSERT, new List<Account>(), new List<Account>());
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
         triggerManager.beforeInsert()
             .bind(new FirstHandler())
             .bind(new MainHandler())
@@ -106,17 +105,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
 
     @IsTest
     static void testBinding_Stop_AfterInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare(
-            TriggerOperation.AFTER_INSERT, new List<Account> {
-                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1)),
-                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2)),
-                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3))
-            }, new List<Account> {
-                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1)),
-                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2)),
-                new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3))
-            });
-
+        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.AFTER_INSERT, null, null);
         triggerManager.afterInsert()
             .bind(new FirstHandler())
             .bind(new MainHandler())
@@ -179,7 +168,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
     // #region Test State
     @IsTest
     static void testBinding_State_BeforeInsert() {
-        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
+        Triggers.Manager triggerManager = Triggers.prepare(
+            TriggerOperation.BEFORE_INSERT, new List<SObject>{}, new List<SObject>());
         triggerManager
             .beforeInsert()
                 .bind(new FirstHandler())
@@ -208,7 +198,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
     @IsTest
     static void testBinding_State_BeforeUpdate() {
         Triggers.Manager triggerManager = Triggers.prepare(
-            TriggerOperation.BEFORE_UPDATE, new List<Account>(), new List<Account>());
+            TriggerOperation.BEFORE_UPDATE, new List<SObject>(), new List<SObject>());
         triggerManager
             .beforeUpdate()
                 .bind(new FirstHandler())
@@ -222,7 +212,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
 
     @IsTest
     static void testBinding_State_AfterUpdate() {
-        Triggers.Manager triggerManager = Triggers.prepare(TriggerOperation.AFTER_UPDATE, null, null);
+        Triggers.Manager triggerManager = Triggers.prepare(
+            TriggerOperation.AFTER_UPDATE, new List<SObject> (), new List<SObject> ());
         triggerManager
             .afterUpdate()
                 .bind(new FirstHandler())
@@ -274,6 +265,54 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         .execute();
 
         System.assertEquals(4, triggerManager.context.state.get('counter'));
+    }
+
+    @IsTest
+    static void testBinding_Mock() {
+        List<SObject> oldList = new List<SObject> {
+            new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1), Name = 'Old Name 1'),
+            new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2), Name = 'Old Name 2'),
+            new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3), Name = 'Old Name 3')};
+
+        List<SObject> newList = new List<SObject> {
+            new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1), Name = 'New Name 1'),
+            new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2), Name = 'New Name 2'),
+            new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3), Name = 'New Name 3')};
+
+        Triggers.prepare(TriggerOperation.BEFORE_INSERT, oldList, newList)
+            .afterUpdate()
+                .bind(new AccountNameChangedHandler())
+        .execute();
+
+        Triggers.prepare(TriggerOperation.AFTER_INSERT, oldList, newList)
+            .afterUpdate()
+                .bind(new AccountNameChangedHandler())
+        .execute();
+
+        Triggers.prepare(TriggerOperation.BEFORE_UPDATE, oldList, newList)
+            .afterUpdate()
+                .bind(new AccountNameChangedHandler())
+        .execute();
+
+        Triggers.prepare(TriggerOperation.AFTER_UPDATE, oldList, newList)
+            .afterUpdate()
+                .bind(new AccountNameChangedHandler())
+        .execute();
+
+        Triggers.prepare(TriggerOperation.BEFORE_DELETE, oldList, newList)
+            .afterUpdate()
+                .bind(new AccountNameChangedHandler())
+        .execute();
+
+        Triggers.prepare(TriggerOperation.AFTER_DELETE, oldList, newList)
+            .afterUpdate()
+                .bind(new AccountNameChangedHandler())
+        .execute();
+
+        Triggers.prepare(TriggerOperation.AFTER_UNDELETE, oldList, newList)
+            .afterUpdate()
+                .bind(new AccountNameChangedHandler())
+        .execute();
     }
     // #endregion
 
@@ -792,6 +831,70 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
 
         public void afterUndelete(Triggers.Context context) {
             then(context);
+        }
+    }
+
+    public class AccountNameChangedHandler implements Triggers.Handler, Triggers.BeforeInsert,
+        Triggers.AfterInsert, Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete,
+        Triggers.AfterDelete, Triggers.AfterUndelete {
+        public Boolean criteria(Triggers.Context context) {
+            return Triggers.WHEN_ALWAYS;
+        }
+
+        public void beforeInsert(Triggers.Context context) {
+            System.assertEquals(null, context.props.oldList);
+            System.assertEquals(null, context.props.oldMap);
+            System.assertEquals(3, context.props.newList.size());
+            System.assertEquals(3, context.props.newMap.size());
+        }
+
+        public void afterInsert(Triggers.Context context) {
+            System.assertEquals(null, context.props.oldList);
+            System.assertEquals(null, context.props.oldMap);
+            System.assertEquals(3, context.props.newList.size());
+            System.assertEquals(3, context.props.newMap.size());
+        }
+
+        public void beforeUpdate(Triggers.Context context) {
+            System.assertEquals(3, context.props.oldList.size());
+            System.assertEquals(3, context.props.oldMap.size());
+            System.assertEquals(3, context.props.newList.size());
+            System.assertEquals(3, context.props.newMap.size());
+
+            System.assertEquals(3, context.props.filterChanged(Account.Name).size());
+            System.assertEquals(true, context.props.isChanged(Account.Name));
+        }
+
+        public void afterUpdate(Triggers.Context context) {
+            System.assertEquals(3, context.props.oldList.size());
+            System.assertEquals(3, context.props.oldMap.size());
+            System.assertEquals(3, context.props.newList.size());
+            System.assertEquals(3, context.props.newMap.size());
+
+            System.assertEquals(3, context.props.filterChanged(Account.Name).size());
+            System.assertEquals(true, context.props.isChanged(Account.Name));
+        }
+
+        public void beforeDelete(Triggers.Context context) {
+            System.assertEquals(3, context.props.oldList.size());
+            System.assertEquals(3, context.props.oldMap.size());
+            System.assertEquals(null, context.props.newList);
+            System.assertEquals(null, context.props.newMap);
+
+        }
+
+        public void afterDelete(Triggers.Context context) {
+            System.assertEquals(3, context.props.oldList.size());
+            System.assertEquals(3, context.props.oldMap.size());
+            System.assertEquals(null, context.props.newList);
+            System.assertEquals(null, context.props.newMap);
+        }
+
+        public void afterUndelete(Triggers.Context context) {
+            System.assertEquals(null, context.props.oldList);
+            System.assertEquals(null, context.props.oldMap);
+            System.assertEquals(3, context.props.newList.size());
+            System.assertEquals(3, context.props.newMap.size());
         }
     }
     // #endregion

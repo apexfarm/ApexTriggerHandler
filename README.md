@@ -1,10 +1,19 @@
 # Apex Trigger Handler
 
-![](https://img.shields.io/badge/version-1.1.1-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![](https://img.shields.io/badge/version-1.1.2-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
 
 There are already many trigger handler libraries out there, but this one has some different approaches or advantanges such as state sharing, built in helper methods etc.. Just one class `Triggers.cls` with its corresponding test class `TriggersTest.cls`, and its minimal and simple.
 
-## Features
+------
+
+### Release 1.1.2
+
+1. Eliminate any DML statements in test class, so the library can be installed in any org.
+2. **[Unit Test Mock](#unit-test-how-to)**: Add a private but `@TestVisible` helper method to mock the handler tests, so we don't need to do any DMLs in order to trigger the handlers.
+
+------
+
+### Features
 
 1. Share common query results via context.state with the following handlers in the current trigger execution context.
 2. Built-in helpers to perform common operations on trigger properties, such as detect field changes.
@@ -136,6 +145,27 @@ public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate
 }
 ```
 
+### Unit Test How-To
+
+The following method is private but `@TestVisible`, it can be used in test methods to supply mock recoreds for old and new lists. So we don't need to perform DMLs to trigger the real triggers.
+
+```java
+List<Account> oldList = new List<Account> {
+    new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1), Name = 'Old Name 1'),
+    new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2), Name = 'Old Name 2'),
+    new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3), Name = 'Old Name 3')}
+
+List<Account> newList = new List<Account> {
+    new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 1), Name = 'New Name 1'),
+    new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 2), Name = 'New Name 2'),
+    new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3), Name = 'New Name 3')}
+
+Triggers.prepare(TriggerOperation.Before_Update, oldList, newList)
+    .beforeUpdate()
+        .bind(new MyAccountHandler())
+    .execute();
+```
+
 ## APIs
 
 ### Trigger Handler Interfaces
@@ -156,8 +186,8 @@ public class MyAccountHandler implements Triggers.Handler, Triggers.BeforeUpdate
 | Property/Method | Type                | Description                                                  |
 | --------------- | ------------------- | ------------------------------------------------------------ |
 | context.props   | Triggers.Props      | All properties on Trigger are exposed by this class. In addition there are frequently used helper methods and a convinient sObjectType property, in case reflection is needed . |
-| context.state   | Map<String, Object> | A map provided for developers to pass any value down to other handlers. |
-| context.skips   | Triggers.Skips      | A Set wrapper to store handler names to be skipped. You can call `context.skips.add()`, `context.skips.remove()`, `context.skips.clear()` `context.skips.contains()` etc. The passed-in handlers could be trigger handlers of different sObject triggers. |
+| context.state   | Map<Object, Object> | A map provided for developers to pass any value down to other handlers. |
+| context.skips   | Triggers.Skips      | A set to store handlers to be skipped. Call the following methods to manage skips: `context.skips.add()`, `context.skips.remove()`, `context.skips.clear()` `context.skips.contains()` etc. |
 | context.next()  | void                | Call the next handler.                                       |
 | context.stop()  | void                | Stop execute any following handlers. A bit like the the stop in process builders. |
 

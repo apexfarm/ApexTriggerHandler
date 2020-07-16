@@ -38,6 +38,14 @@ public class Triggers {
         return new Manager();
     }
 
+    @TestVisible
+    private static Manager prepare(
+        TriggerOperation operationType,
+        List<SObject> oldList, List<SObject> newList) {
+        Props props = new Props(operationType, oldList, newList);
+        return new Manager(props);
+    }
+
     public class Manager {
         public final Props props { get; private set; }
         public final Context context { get; private set; }
@@ -127,53 +135,45 @@ public class Triggers {
 
         public void execute() {
             context.execute();
+            this.props.isExecuting = false;
         }
     }
 
     public class Skips {
-        private final Set<String> skipHandlerNames = new Set<String>();
+        @TestVisible
+        private final Set<Type> skippedHandlers = new Set<Type>();
 
         public void add(type handlerType) {
-            skipHandlerNames.add(getHandlerName(handlerType));
+            skippedHandlers.add(handlerType);
         }
 
         public void remove(type handlerType) {
-            skipHandlerNames.remove(getHandlerName(handlerType));
+            skippedHandlers.remove(handlerType);
         }
 
         public Boolean contains(type handlerType) {
-            return contains(getHandlerName(handlerType));
-        }
-
-        public void clear() {
-            skipHandlerNames.clear();
-        }
-
-        private Boolean contains(String handlerName) {
-            return skipHandlerNames.contains(handlerName);
-        }
-
-        private Boolean contains(Handler handler) {
-            return contains(getHandlerName(handler));
+            return skippedHandlers.contains(handlerType);
         }
 
         @TestVisible
-        private String getHandlerName(Type handlerType) {
-            String fullName = handlerType.getName();
-            if (fullName.indexOf('.') != -1) {
-                return fullName.substring(fullName.indexOf('.') + 1);
-            }
-            return fullName;
+        private Boolean contains(Handler handler) {
+            return contains(getHandlerType(handler));
         }
 
-        private String getHandlerName(Handler handler) {
+        public void clear() {
+            skippedHandlers.clear();
+        }
+
+        private Type getHandlerType(Handler handler) {
             String printName = String.valueOf(handler);
-            return printName.substring(0, printName.indexOf(':'));
+            String typeName = printName.substring(0, printName.indexOf(':'));
+            System.debug(typeName);
+            return Type.forName(typeName);
         }
     }
 
     public class Context {
-        public final Map<String, Object> state { get; private set; }
+        public final Map<Object, Object> state { get; private set; }
         public final Skips skips { get; private set; }
         public final Props props { get; private set; }
 
@@ -183,7 +183,7 @@ public class Triggers {
 
         private Context(Props props) {
             this.props = props;
-            this.state = new Map<String, Object>();
+            this.state = new Map<Object, Object>();
             this.skips = Triggers.skips;
         }
 
@@ -287,7 +287,7 @@ public class Triggers {
 
         @TestVisible
         private Props() {
-            this.isExecuting = Trigger.isExecuting;
+            this.isExecuting = true;
             this.isBefore = Trigger.isBefore;
             this.isAfter = Trigger.isAfter;
             this.isInsert = Trigger.isInsert;
@@ -301,6 +301,89 @@ public class Triggers {
             this.operationType = Trigger.operationType;
             this.size = Trigger.size;
             this.setSObjectType();
+        }
+
+        @TestVisible
+        private Props(TriggerOperation operationType, List<SObject> oldList, List<SObject> newList) {
+            this.isExecuting = true;
+            this.operationType = operationType;
+            this.isBefore = false;
+            this.isAfter = false;
+            this.isInsert = false;
+            this.isUpdate = false;
+            this.isDelete = false;
+            this.isUndelete = false;
+            switch on operationType {
+                when BEFORE_INSERT {
+                    this.isBefore = true;
+                    this.isInsert = true;
+                    this.oldList = null;
+                    this.oldMap = null;
+                    this.newList = newList;
+                    this.newMap = newList != null? new Map<Id, SObject>(newList) : null;
+                }
+                when AFTER_INSERT {
+                    this.isAfter = true;
+                    this.isInsert = true;
+                    this.oldList = null;
+                    this.oldMap = null;
+                    this.newList = newList;
+                    this.newMap = newList != null? new Map<Id, SObject>(newList) : null;
+                }
+                when BEFORE_UPDATE {
+                    this.isBefore = true;
+                    this.isUpdate = true;
+                    this.oldList = oldList;
+                    this.oldMap = oldList != null ? new Map<Id, SObject>(oldList) : null;
+                    this.newList = newList;
+                    this.newMap = newList != null? new Map<Id, SObject>(newList) : null;
+                }
+                when AFTER_UPDATE {
+                    this.isAfter = true;
+                    this.isUpdate = true;
+                    this.oldList = oldList;
+                    this.oldMap = oldList != null ? new Map<Id, SObject>(oldList) : null;
+                    this.newList = newList;
+                    this.newMap = newList != null? new Map<Id, SObject>(newList) : null;
+                }
+                when BEFORE_DELETE {
+                    this.isBefore = true;
+                    this.isDelete = true;
+                    this.oldList = oldList;
+                    this.oldMap = oldList != null ? new Map<Id, SObject>(oldList) : null;
+                    this.newList = null;
+                    this.newMap = null;
+                }
+                when AFTER_DELETE {
+                    this.isAfter = true;
+                    this.isDelete = true;
+                    this.oldList = oldList;
+                    this.oldMap = oldList != null ? new Map<Id, SObject>(oldList) : null;
+                    this.newList = null;
+                    this.newMap = null;
+                }
+                when AFTER_UNDELETE {
+                    this.isAfter = true;
+                    this.isUndelete = true;
+                    this.oldList = null;
+                    this.oldMap = null;
+                    this.newList = newList;
+                    this.newMap = newList != null? new Map<Id, SObject>(newList) : null;
+                }
+                when else {
+                }
+            }
+            this.setSize();
+            this.setSObjectType();
+        }
+
+        private void setSize() {
+            this.size = 0;
+            if (this.oldList != null) {
+                this.size = this.oldList.size();
+            } else if (this.newList != null) {
+                this.size = this.newList.size();
+            }
         }
 
         @TestVisible

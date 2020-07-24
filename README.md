@@ -1,15 +1,14 @@
 # Apex Trigger Handler
 
-![](https://img.shields.io/badge/version-1.1.2-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![](https://img.shields.io/badge/version-1.1.3-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
 
 There are already many trigger handler libraries out there, but this one has some different approaches or advantanges such as state sharing, built in helper methods etc.. Just one class `Triggers.cls` with its corresponding test class `TriggersTest.cls`, and its minimal and simple.
 
 ------
 
-### Release 1.1.2
+### Release 1.1.3
 
-1. Eliminate any DML statements in test class, so the library can be installed in any org.
-2. **[Unit Test How-To](#unit-test-how-to)**: Add a private but `@TestVisible` helper method to mock the handler tests, so we don't need to do any DMLs in order to trigger the handlers.
+Breaking changes to [Triggers.Props Methods](triggers-props-methods): All `filterChanged()` methods now return `List<Id>`, instead of `Set<Id>`. This is because  `List<Id>` has wider use cases, it can not only be used in a where condition, but can also be used in an iteration.
 
 ------
 
@@ -193,7 +192,7 @@ Triggers.prepare(TriggerOperation.Before_Update, oldList, newList)
 
 ### Triggers.Props
 
-#### Properties
+#### Triggers.Props Properties
 
 | Property      | Type               | Description              |
 | ------------- | ------------------ | ------------------------ |
@@ -212,7 +211,7 @@ Triggers.prepare(TriggerOperation.Before_Update, oldList, newList)
 | operationType | TriggerOperation   | Trigger.operationType    |
 | size          | Integer            | Trigger.size             |
 
-#### Methods
+#### Triggers.Props Methods
 
 **Note**: the following `isChanged` method has the same behavior has the `ISCHANGED` formula:
 
@@ -224,14 +223,14 @@ Triggers.prepare(TriggerOperation.Before_Update, oldList, newList)
 >   - The field was zero and now contains any other value
 >
 
-| Method                                                       | Type      | Description                                                  |
-| ------------------------------------------------------------ | --------- | ------------------------------------------------------------ |
-| - `isChanged(SObjectField field1)`                           | Boolean   | Check if any record has a field changed during an update.    |
-| - `isChangedAny(SObjectField field1, SObjectField field2)`<br>- `isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAny(List<SObjectField> fields)` | Boolean   | Check if any record has multiple fields changed during an update. Return `true` if any specified field is changed. |
-| - `isChangedAll(SObjectField field1, SObjectField field2)`<br>- `isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAll(List<SObjectField> fields)` | Boolean   | Check if any record has multiple fields changed during an update. Return `true` only if all specified fields are changed. |
-| - `filterChanged(SObjectField field1)`                       | Set\<Id\> | Filter IDs of records have a field changed during an update. |
-| - `filterChangedAny(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAny(List<SObjectField> fields)` | Set\<Id\> | Filter IDs of records have mulantiple fields changed during an update. Return IDs if any specified field is changed. |
-| - `filterChangedAll(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAll(List<SObjectField> fields)` | Set\<Id\> | Filter IDs of records have mulantiple fields changed during an update. Return IDs only if all specified fields are changed. |
+| Method                                                       | Type       | Description                                                  |
+| ------------------------------------------------------------ | ---------- | ------------------------------------------------------------ |
+| - `isChanged(SObjectField field1)`                           | Boolean    | Check if any record has a field changed during an update.    |
+| - `isChangedAny(SObjectField field1, SObjectField field2)`<br>- `isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAny(List<SObjectField> fields)` | Boolean    | Check if any record has multiple fields changed during an update. Return `true` if any specified field is changed. |
+| - `isChangedAll(SObjectField field1, SObjectField field2)`<br>- `isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAll(List<SObjectField> fields)` | Boolean    | Check if any record has multiple fields changed during an update. Return `true` only if all specified fields are changed. |
+| - `filterChanged(SObjectField field1)`                       | List\<Id\> | Filter IDs of records have a field changed during an update. |
+| - `filterChangedAny(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAny(List<SObjectField> fields)` | List\<Id\> | Filter IDs of records have mulantiple fields changed during an update. Return IDs if any specified field is changed. |
+| - `filterChangedAll(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAll(List<SObjectField> fields)` | List\<Id\> | Filter IDs of records have mulantiple fields changed during an update. Return IDs only if all specified fields are changed. |
 
 ## License
 

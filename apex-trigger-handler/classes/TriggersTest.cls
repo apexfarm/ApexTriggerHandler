@@ -388,7 +388,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = accounts;
         props.newMap = new Map<Id, Account>(accounts);
 
-        Set<Id> changedIds = props.filterChanged(Account.Name);
+        List<Id> changedIds = props.filterChanged(Account.Name);
         Boolean isChanged = props.isChanged(Account.Name);
 
         System.assertEquals(0, changedIds.size());
@@ -414,7 +414,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = newAccounts;
         props.newMap = new Map<Id, Account>(newAccounts);
 
-        Set<Id> changedIds = props.filterChanged(Account.Name);
+        List<Id> changedIds = props.filterChanged(Account.Name);
         Boolean isChanged = props.isChanged(Account.Name);
 
         System.assertEquals(1, changedIds.size());
@@ -436,7 +436,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = accounts;
         props.newMap = new Map<Id, Account>(accounts);
 
-        Set<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description);
+        List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description);
         Boolean isChanged = props.isChangedAny(Account.Name, Account.Description);
 
         System.assertEquals(0, changedIds.size());
@@ -462,7 +462,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = newAccounts;
         props.newMap = new Map<Id, Account>(newAccounts);
 
-        Set<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description);
+        List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description);
         Boolean isChanged = props.isChangedAny(Account.Name, Account.Description);
 
         System.assertEquals(2, changedIds.size());
@@ -489,7 +489,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = newAccounts;
         props.newMap = new Map<Id, Account>(newAccounts);
 
-        Set<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description, Account.BillingCity);
+        List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description, Account.BillingCity);
         Boolean isChanged = props.isChangedAny(Account.Name, Account.Description, Account.BillingCity);
 
         System.assertEquals(3, changedIds.size());
@@ -510,7 +510,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = accounts;
         props.newMap = new Map<Id, Account>(accounts);
 
-        Set<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description);
+        List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description);
         Boolean isChanged = props.isChangedAll(Account.Name, Account.Description);
 
         System.assertEquals(0, changedIds.size());
@@ -538,7 +538,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = newAccounts;
         props.newMap = new Map<Id, Account>(newAccounts);
 
-        Set<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description);
+        List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description);
         Boolean isChanged = props.isChangedAll(Account.Name, Account.Description);
 
         System.assertEquals(1, changedIds.size());
@@ -595,7 +595,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = newAccounts;
         props.newMap = new Map<Id, Account>(newAccounts);
 
-        Set<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description, Account.BillingCity);
+        List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description, Account.BillingCity);
         Boolean isChanged = props.isChangedAll(Account.Name, Account.Description, Account.BillingCity);
 
         System.assertEquals(1, changedIds.size());

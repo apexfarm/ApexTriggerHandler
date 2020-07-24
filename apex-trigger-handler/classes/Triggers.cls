@@ -388,9 +388,9 @@ public class Triggers {
 
         @TestVisible
         private void setSObjectType() {
-            if (this.oldList != null ) {
+            if (this.oldList != null) {
                 this.sObjectType = this.oldList.getSobjectType();
-            } else if (this.newList != null ) {
+            } else if (this.newList != null) {
                 this.sObjectType = this.newList.getSObjectType();
             }
         }
@@ -449,19 +449,19 @@ public class Triggers {
             return filterChangedAll(fields).size() > 0;
         }
 
-        public Set<Id> filterChanged(SObjectField field1) {
+        public List<Id> filterChanged(SObjectField field1) {
             return filterChangedAny(new List<SObjectField> { field1 });
         }
 
-        public Set<Id> filterChangedAny(SObjectField field1, SObjectField field2) {
+        public List<Id> filterChangedAny(SObjectField field1, SObjectField field2) {
             return filterChangedAny(new List<SObjectField> { field1, field2 });
         }
 
-        public Set<Id> filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3) {
+        public List<Id> filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3) {
             return filterChangedAny(new List<SObjectField> { field1, field2, field3 });
         }
 
-        public Set<Id> filterChangedAny(List<SObjectField> fields) {
+        public List<Id> filterChangedAny(List<SObjectField> fields) {
             Set<Id> changedIds = new Set<Id>();
             if (this.isUpdate) {
                 for(Id objectId : this.newMap.keySet()) {
@@ -473,18 +473,18 @@ public class Triggers {
                     }
                 }
             }
-            return changedIds;
+            return new List<Id>(changedIds);
         }
 
-        public Set<Id> filterChangedAll(SObjectField field1, SObjectField field2) {
+        public List<Id> filterChangedAll(SObjectField field1, SObjectField field2) {
             return filterChangedAll(new List<SObjectField> { field1, field2 });
         }
 
-        public Set<Id> filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3) {
+        public List<Id> filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3) {
             return filterChangedAll(new List<SObjectField> { field1, field2, field3 });
         }
 
-        public Set<Id> filterChangedAll(List<SObjectField> fields) {
+        public List<Id> filterChangedAll(List<SObjectField> fields) {
             Set<Id> changedIds = new Set<Id>();
             if (this.isUpdate) {
                 changedIds = this.newMap.keySet();
@@ -497,7 +497,7 @@ public class Triggers {
                     }
                 }
             }
-            return changedIds;
+            return new List<Id>(changedIds);
         }
     }
 

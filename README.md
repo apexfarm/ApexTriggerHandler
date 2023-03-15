@@ -21,7 +21,7 @@ This package is the minimal installation which only includes two classes `Trigge
 
 ### Package ApexTriggerHandlerExt
 
-This package can be optionally installed to extend the features of the above one. It includes additional metadata in order to support trigger handler configurations. It will introduce one SOQL query to the custom metadata types, but only one. If your system already reaches some governor limit around SOQL queries, can consider deploy this one later. **Note**: The above package is required to be installed before this one.
+This package can be optionally installed to extend the features of the above one. It includes additional metadata and introduce only one SOQL query to the custom metadata types. If your system already reaches some governor limit around SOQL queries, can consider deploy this one later. **Note**: The above package is required to be installed before this one.
 
 | Environment           | Installation Link                                                                                                                                         | Version |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -141,19 +141,17 @@ public class SalesModule extends DI.Module {
 }
 
 public class IMyAccountHandler extends Triggers.Handler {}
-public class MyAccountHandler implements
-    IMyAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
+public class MyAccountHandler implements IMyAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
 
 public class IAnotherAccountHandler extends Triggers.Handler {}
-public class AnotherAccountHandler implements
-    IAnotherAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
+public class AnotherAccountHandler implements IAnotherAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
 ```
 
 ## 2. Trigger Handler
 
-### 2.1 Create  Handlers
+### 2.1 Create Handlers
 
-To create a trigger handler, you will need to create a class that implements the `Triggers.Handler` interface and its `criteria` method, and also the corresponding trigger event interfaces and methods. Please check the comments below for detailed explanations and tricks to customize a trigger handler.
+To create a trigger handler, you will need to create a class that implements the `Triggers.Handler` interface and its `criteria` method. Please check the comments below for detailed explanations and tricks to customize a trigger handler.
 
 ```java
 // 1. Use interfaces instead of a base class to extend a custom handler. With interface

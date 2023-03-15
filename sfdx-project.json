@@ -1,11 +1,32 @@
 {
-  "packageDirectories": [
-    {
-      "path": "apex-trigger-handler",
-      "default": true
+    "packageDirectories": [
+        {
+            "path": "apex-trigger-handler",
+            "package": "ApexTriggerHandler",
+            "versionName": "ver 1.2.0",
+            "versionNumber": "1.2.0.NEXT"
+        },
+        {
+            "path": "apex-trigger-loader",
+            "package": "ApexTriggerHandlerExt",
+            "versionName": "ver 1.2.0",
+            "versionNumber": "1.2.0.NEXT",
+            "default": true,
+            "dependencies": [
+                {
+                    "package": "ApexTriggerHandler@1.2.0-1"
+                }
+            ]
+        }
+    ],
+    "name": "ApexTriggerHandler",
+    "namespace": "",
+    "sfdcLoginUrl": "https://login.salesforce.com",
+    "sourceApiVersion": "57.0",
+    "packageAliases": {
+        "ApexTriggerHandler": "0Ho2v000000PBFvCAO",
+        "ApexTriggerHandler@1.2.0-1": "04t2v000007Cfg6AAC",
+        "ApexTriggerHandlerExt": "0Ho2v000000PBG0CAO",
+        "ApexTriggerHandlerExt@1.2.0-1": "04t2v000007CfgBAAS"
     }
-  ],
-  "namespace": "",
-  "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "48.0"
 }

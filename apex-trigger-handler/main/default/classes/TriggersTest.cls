@@ -31,7 +31,7 @@
  */
 
 @IsTest
-public with sharing class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
+public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     public static String getFakeId(Schema.SObjectType objectType, Integer index) {
         return objectType.getDescribe().getKeyPrefix()
             + '000zzzz' // start from a large Id to avoid confliction during unit test.
@@ -50,21 +50,23 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
     static void testSkips_getHandlerName_ByType() {
         Triggers.Skips skips = new Triggers.Skips();
         skips.add(String.class);
-        System.assertEquals(true, skips.contains(String.class));
+        Assert.areEqual(true, skips.contains(String.class));
 
         skips.remove(String.class);
-        System.assertEquals(0, skips.skippedHandlers.size());
+        Assert.areEqual(0, skips.skippedHandlers.size());
 
         skips.add(TriggersTest.TriggersTest.class);
-        System.assertEquals(true, skips.contains(TriggersTest.class));
+        Assert.areEqual(true, skips.contains(TriggersTest.class));
 
         skips.clear();
-        System.assertEquals(0, skips.skippedHandlers.size());
+        Assert.areEqual(0, skips.skippedHandlers.size());
 
         skips.add(TriggersTest.class);
-        System.assertEquals(true, skips.contains(new TriggersTest()));
+        Assert.areEqual(true, skips.contains(new TriggersTest()));
     }
 
+    // ====================
+    // #region Test Binding
     @IsTest
     static void testBinding_BaseLine() {
         Triggers.prepare()
@@ -100,7 +102,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
             .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -115,7 +117,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
             .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -129,7 +131,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
             .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -145,7 +147,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
             .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -162,9 +164,12 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
+    // #endregion
+    // ====================
 
+    // ==================
     // #region Test State
     @IsTest
     static void testBinding_State_BeforeInsert() {
@@ -178,7 +183,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -192,7 +197,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -207,7 +212,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -222,7 +227,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -236,7 +241,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -250,7 +255,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -264,7 +269,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
                 .bind(new LastHandler())
         .execute();
 
-        System.assertEquals(4, triggerManager.context.state.get('counter'));
+        Assert.areEqual(4, triggerManager.context.state.get('counter'));
     }
 
     @IsTest
@@ -315,7 +320,9 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         .execute();
     }
     // #endregion
+    // ==================
 
+    // ===================
     // #region Test Helper
     @IsTest
     static void testProps_IsChanged_Negative() {
@@ -331,7 +338,7 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
 
         Boolean isChanged = props.isChanged(accounts[0].Id, Account.Name);
 
-        System.assertEquals(false, isChanged);
+        Assert.areEqual(false, isChanged);
     }
 
     @IsTest
@@ -348,10 +355,10 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         };
 
         List<Object> names = props.getValues(Account.Name);
-        System.assertEquals(3, names.size());
-        System.assertEquals('Account 1', (String)names[0]);
-        System.assertEquals('Account 2', (String)names[1]);
-        System.assertEquals('Account 3', (String)names[2]);
+        Assert.areEqual(3, names.size());
+        Assert.areEqual('Account 1', (String)names[0]);
+        Assert.areEqual('Account 2', (String)names[1]);
+        Assert.areEqual('Account 3', (String)names[2]);
     }
 
     @IsTest
@@ -368,10 +375,10 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         };
 
         List<Object> names = props.getValues(Account.Name);
-        System.assertEquals(3, names.size());
-        System.assertEquals('Account 1', (String)names[0]);
-        System.assertEquals('Account 2', (String)names[1]);
-        System.assertEquals('Account 3', (String)names[2]);
+        Assert.areEqual(3, names.size());
+        Assert.areEqual('Account 1', (String)names[0]);
+        Assert.areEqual('Account 2', (String)names[1]);
+        Assert.areEqual('Account 3', (String)names[2]);
     }
 
     @IsTest
@@ -391,8 +398,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         List<Id> changedIds = props.filterChanged(Account.Name);
         Boolean isChanged = props.isChanged(Account.Name);
 
-        System.assertEquals(0, changedIds.size());
-        System.assertEquals(false, isChanged);
+        Assert.areEqual(0, changedIds.size());
+        Assert.areEqual(false, isChanged);
     }
 
     @IsTest
@@ -417,8 +424,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         List<Id> changedIds = props.filterChanged(Account.Name);
         Boolean isChanged = props.isChanged(Account.Name);
 
-        System.assertEquals(1, changedIds.size());
-        System.assertEquals(true, isChanged);
+        Assert.areEqual(1, changedIds.size());
+        Assert.areEqual(true, isChanged);
     }
 
 
@@ -439,8 +446,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description);
         Boolean isChanged = props.isChangedAny(Account.Name, Account.Description);
 
-        System.assertEquals(0, changedIds.size());
-        System.assertEquals(false, isChanged);
+        Assert.areEqual(0, changedIds.size());
+        Assert.areEqual(false, isChanged);
     }
 
     @IsTest
@@ -465,8 +472,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description);
         Boolean isChanged = props.isChangedAny(Account.Name, Account.Description);
 
-        System.assertEquals(2, changedIds.size());
-        System.assertEquals(true, isChanged);
+        Assert.areEqual(2, changedIds.size());
+        Assert.areEqual(true, isChanged);
     }
 
     @IsTest
@@ -492,8 +499,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description, Account.BillingCity);
         Boolean isChanged = props.isChangedAny(Account.Name, Account.Description, Account.BillingCity);
 
-        System.assertEquals(3, changedIds.size());
-        System.assertEquals(true, isChanged);
+        Assert.areEqual(3, changedIds.size());
+        Assert.areEqual(true, isChanged);
     }
 
     @IsTest
@@ -513,8 +520,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description);
         Boolean isChanged = props.isChangedAll(Account.Name, Account.Description);
 
-        System.assertEquals(0, changedIds.size());
-        System.assertEquals(false, isChanged);
+        Assert.areEqual(0, changedIds.size());
+        Assert.areEqual(false, isChanged);
     }
 
     @IsTest
@@ -541,8 +548,8 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description);
         Boolean isChanged = props.isChangedAll(Account.Name, Account.Description);
 
-        System.assertEquals(1, changedIds.size());
-        System.assertEquals(true, isChanged);
+        Assert.areEqual(1, changedIds.size());
+        Assert.areEqual(true, isChanged);
     }
 
     @IsTest
@@ -566,9 +573,9 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         props.newList = newAccounts;
         props.newMap = new Map<Id, Account>(newAccounts);
 
-        System.assertEquals(null, props.sObjectType);
+        Assert.areEqual(null, props.sObjectType);
         props.setSObjectType();
-        System.assertEquals(Account.SObjectType, props.sObjectType);
+        Assert.areEqual(Account.SObjectType, props.sObjectType);
     }
 
     @IsTest
@@ -598,13 +605,14 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description, Account.BillingCity);
         Boolean isChanged = props.isChangedAll(Account.Name, Account.Description, Account.BillingCity);
 
-        System.assertEquals(1, changedIds.size());
-        System.assertEquals(true, isChanged);
+        Assert.areEqual(1, changedIds.size());
+        Assert.areEqual(true, isChanged);
     }
     // #endregion
+    // ===================
 
-
-    // #region Test Handler Impls
+    // =====================
+    // #region Handler Impls
     // TriggersTest is treated as a handler to be skipped, because inner class cannot be reflected
     // from an instance back to type properly.
     public Boolean criteria(Triggers.Context context) {
@@ -629,9 +637,9 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
             if (context.state.get('counter') == null) {
                 context.state.put('counter', 0);
             }
-            System.assertEquals(0, context.state.get('counter'));
+            Assert.areEqual(0, context.state.get('counter'));
             context.next();
-            System.assertEquals(4, context.state.get('counter'));
+            Assert.areEqual(4, context.state.get('counter'));
         }
 
         public void beforeInsert(Triggers.Context context) {
@@ -800,9 +808,9 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         }
 
         private void then(Triggers.Context context) {
-            System.assertEquals(2, context.state.get('counter'));
+            Assert.areEqual(2, context.state.get('counter'));
             context.next();
-            System.assertEquals(2, context.state.get('counter'));
+            Assert.areEqual(2, context.state.get('counter'));
         }
 
         public void beforeInsert(Triggers.Context context) {
@@ -842,60 +850,61 @@ public with sharing class TriggersTest implements Triggers.Handler, Triggers.Bef
         }
 
         public void beforeInsert(Triggers.Context context) {
-            System.assertEquals(null, context.props.oldList);
-            System.assertEquals(null, context.props.oldMap);
-            System.assertEquals(3, context.props.newList.size());
-            System.assertEquals(3, context.props.newMap.size());
+            Assert.areEqual(null, context.props.oldList);
+            Assert.areEqual(null, context.props.oldMap);
+            Assert.areEqual(3, context.props.newList.size());
+            Assert.areEqual(3, context.props.newMap.size());
         }
 
         public void afterInsert(Triggers.Context context) {
-            System.assertEquals(null, context.props.oldList);
-            System.assertEquals(null, context.props.oldMap);
-            System.assertEquals(3, context.props.newList.size());
-            System.assertEquals(3, context.props.newMap.size());
+            Assert.areEqual(null, context.props.oldList);
+            Assert.areEqual(null, context.props.oldMap);
+            Assert.areEqual(3, context.props.newList.size());
+            Assert.areEqual(3, context.props.newMap.size());
         }
 
         public void beforeUpdate(Triggers.Context context) {
-            System.assertEquals(3, context.props.oldList.size());
-            System.assertEquals(3, context.props.oldMap.size());
-            System.assertEquals(3, context.props.newList.size());
-            System.assertEquals(3, context.props.newMap.size());
+            Assert.areEqual(3, context.props.oldList.size());
+            Assert.areEqual(3, context.props.oldMap.size());
+            Assert.areEqual(3, context.props.newList.size());
+            Assert.areEqual(3, context.props.newMap.size());
 
-            System.assertEquals(3, context.props.filterChanged(Account.Name).size());
-            System.assertEquals(true, context.props.isChanged(Account.Name));
+            Assert.areEqual(3, context.props.filterChanged(Account.Name).size());
+            Assert.areEqual(true, context.props.isChanged(Account.Name));
         }
 
         public void afterUpdate(Triggers.Context context) {
-            System.assertEquals(3, context.props.oldList.size());
-            System.assertEquals(3, context.props.oldMap.size());
-            System.assertEquals(3, context.props.newList.size());
-            System.assertEquals(3, context.props.newMap.size());
+            Assert.areEqual(3, context.props.oldList.size());
+            Assert.areEqual(3, context.props.oldMap.size());
+            Assert.areEqual(3, context.props.newList.size());
+            Assert.areEqual(3, context.props.newMap.size());
 
-            System.assertEquals(3, context.props.filterChanged(Account.Name).size());
-            System.assertEquals(true, context.props.isChanged(Account.Name));
+            Assert.areEqual(3, context.props.filterChanged(Account.Name).size());
+            Assert.areEqual(true, context.props.isChanged(Account.Name));
         }
 
         public void beforeDelete(Triggers.Context context) {
-            System.assertEquals(3, context.props.oldList.size());
-            System.assertEquals(3, context.props.oldMap.size());
-            System.assertEquals(null, context.props.newList);
-            System.assertEquals(null, context.props.newMap);
+            Assert.areEqual(3, context.props.oldList.size());
+            Assert.areEqual(3, context.props.oldMap.size());
+            Assert.areEqual(null, context.props.newList);
+            Assert.areEqual(null, context.props.newMap);
 
         }
 
         public void afterDelete(Triggers.Context context) {
-            System.assertEquals(3, context.props.oldList.size());
-            System.assertEquals(3, context.props.oldMap.size());
-            System.assertEquals(null, context.props.newList);
-            System.assertEquals(null, context.props.newMap);
+            Assert.areEqual(3, context.props.oldList.size());
+            Assert.areEqual(3, context.props.oldMap.size());
+            Assert.areEqual(null, context.props.newList);
+            Assert.areEqual(null, context.props.newMap);
         }
 
         public void afterUndelete(Triggers.Context context) {
-            System.assertEquals(null, context.props.oldList);
-            System.assertEquals(null, context.props.oldMap);
-            System.assertEquals(3, context.props.newList.size());
-            System.assertEquals(3, context.props.newMap.size());
+            Assert.areEqual(null, context.props.oldList);
+            Assert.areEqual(null, context.props.oldMap);
+            Assert.areEqual(3, context.props.newList.size());
+            Assert.areEqual(3, context.props.newMap.size());
         }
     }
     // #endregion
+    // =====================
 }

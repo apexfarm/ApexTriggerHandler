@@ -1,0 +1,9 @@
+{
+  "trailingComma": "none",
+  "overrides": [
+    {
+      "files": "*.cls",
+      "options": { "tabWidth": 4, "printWidth": 120 }
+    }
+  ]
+}

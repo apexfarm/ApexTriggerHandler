@@ -21,7 +21,7 @@ This package is the minimal installation which only includes two classes `Trigge
 
 ### Package ApexTriggerHandlerExt
 
-This package can be optionally installed to extend the features of the above one. It includes additional metadata and introduce only one SOQL query to the custom metadata types. If your system already reaches some governor limit around SOQL queries, can consider deploy this one later. **Note**: The above package is required to be installed before this one.
+This package can be optionally installed to extend a new feature ([custom metadata type settings](#12-bind-with-handler-settings)) for the above one. It introduces additional but only one SOQL query to a custom metadata type. If your system already reaches some governor limit around SOQL queries, can consider deploy this one later. **Note**: The above package is required to be installed before this one.
 
 | Environment           | Installation Link                                                                                                                                         | Version |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -75,21 +75,21 @@ trigger AccountTrigger on Account (before update, after update) {
 
 ### 1.2 Bind with Handler Settings
 
-This feature is only available when `ApexTriggerHandlerExt` package is installed, or its metadata is manually deployed. Here are some sample records of `Apex_Trigger_Handler_Setting__mdt`, which can provide fine-grained control of trigger handlers at runtime, such as:
+This feature is only available when `ApexTriggerHandlerExt` package is installed, or its metadata is manually deployed. Here are some sample records of `Apex_Trigger_Handler_Setting__mdt`, which can provide fine-grained control of trigger handler behaviors at runtime, such as:
 
-1. To register trigger handlers for a particular sObject trigger event.
-2. To activate or deactivate trigger handlers on trigger event level.
-3. To reorder trigger handlers registered on trigger event level.
-4. To group trigger handlers for the same trigger event with tags.
+1. To register trigger handlers for a particular sObject trigger event (`SObject__c`, `Trigger_Event__c`, `Handler_Class__c`).
+2. To activate or deactivate trigger handlers (`Active__c`).
+3. To reorder trigger handlers (`Execution_Order__c`).
+4. To optionally group trigger handlers with tags (`Tag__c`).
 
 | SObject\_\_c | Trigger_Event\_\_c | Handler_Class\_\_c     | Execution_Order\_\_c | Tag\_\_c | Active\_\_c |
 | ------------ | ------------------ | ---------------------- | -------------------- | -------- | ----------- |
 | Account      | BEFORE_UPDATE      | AccountTriggerHandler1 | 1                    | tag1     | TRUE        |
 | Account      | BEFORE_UPDATE      | AccountTriggerHandler2 | 2                    |          | TRUE        |
 | Account      | BEFORE_UPDATE      | AccountTriggerHandler3 | 3                    |          | **FALSE**   |
-| Account      | AFTER_UPDATE       | AccountTriggerHandler1 | 1                    | tag1     | TRUE        |
-| Account      | AFTER_UPDATE       | AccountTriggerHandler2 | 2                    | tag2     | TRUE        |
-| Account      | AFTER_UPDATE       | AccountTriggerHandler3 | 3                    | tag2     | TRUE        |
+| Account      | AFTER_UPDATE       | AccountTriggerHandler4 | 1                    | tag1     | TRUE        |
+| Account      | AFTER_UPDATE       | AccountTriggerHandler5 | 2                    | tag2     | TRUE        |
+| Account      | AFTER_UPDATE       | AccountTriggerHandler6 | 3                    | tag2     | TRUE        |
 
 Two additional APIs are provided to load the handlers from the above settings, `load()` and `load(tag)`. Their usages are explained in the following comments.
 
@@ -98,18 +98,18 @@ trigger AccountTrigger on Account (before update, after update) {
     Triggers.prepare()
         .beforeUpdate()
             .bind(new MyAccountHandler())
-            .load()       // load all active handlers registered under Account BEFORE_UPDATE
+            .load()       // load all active handlers under Account BEFORE_UPDATE
                           // - AccountTriggerHandler1
                           // - AccountTriggerHandler2
             .bind(new AnotherAccountHandler())
         .afterUpdate()
             .bind(new AnotherAccountHandler())
-            .load('tag1') // load tagged active handlers registered under Account AFTER_UPDATE
-                          // - AccountTriggerHandler1
+            .load('tag1') // load all active handlers with 'tag1' under Account AFTER_UPDATE
+                          // - AccountTriggerHandler4
             .bind(new MyAccountHandler())
-            .load('tag2') // load tagged active handlers registered under Account AFTER_UPDATE
-                          // - AccountTriggerHandler2
-                          // - AccountTriggerHandler3
+            .load('tag2') // load all active handlers with 'tag2' under Account AFTER_UPDATE
+                          // - AccountTriggerHandler5
+                          // - AccountTriggerHandler6
         .execute();
 }
 ```
@@ -258,7 +258,7 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 
 ### 3.2 Test with Mockup Library
 
-The following demo is using [Apex Test Kit](https://github.com/apexfarm/ApexTestKit) as a mockup data library. The behavior will be the same as the above example. A sophisticated mock data library can also generate mockup data with read-only fields, such as formula fields, roll-up summary fields and system fields.
+The following demo is using [Apex Test Kit](https://github.com/apexfarm/ApexTestKit) as a mockup data library. The behavior will be the same as the above example, but a sophisticated mock data library can also generate mockup data with read-only fields, such as formula fields, roll-up summary fields and system fields.
 
 ```java
 @isTest

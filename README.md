@@ -87,9 +87,9 @@ This feature is only available when `ApexTriggerHandlerExt` package is installed
 | Account      | BEFORE_UPDATE      | AccountTriggerHandler1 | 1                    | tag1     | TRUE        |
 | Account      | BEFORE_UPDATE      | AccountTriggerHandler2 | 2                    |          | TRUE        |
 | Account      | BEFORE_UPDATE      | AccountTriggerHandler3 | 3                    |          | **FALSE**   |
-| Account      | AFTER_UPDATE       | AccountTriggerHandler1 | 1                    | tag1     | TRUE        |
-| Account      | AFTER_UPDATE       | AccountTriggerHandler2 | 2                    | tag2     | TRUE        |
-| Account      | AFTER_UPDATE       | AccountTriggerHandler3 | 3                    | tag2     | TRUE        |
+| Account      | AFTER_UPDATE       | AccountTriggerHandler4 | 1                    | tag1     | TRUE        |
+| Account      | AFTER_UPDATE       | AccountTriggerHandler5 | 2                    | tag2     | TRUE        |
+| Account      | AFTER_UPDATE       | AccountTriggerHandler6 | 3                    | tag2     | TRUE        |
 
 Two additional APIs are provided to load the handlers from the above settings, `load()` and `load(tag)`. Their usages are explained in the following comments.
 
@@ -98,18 +98,18 @@ trigger AccountTrigger on Account (before update, after update) {
     Triggers.prepare()
         .beforeUpdate()
             .bind(new MyAccountHandler())
-            .load()       // load all active handlers registered under Account BEFORE_UPDATE
+            .load()       // load all active handlers under Account BEFORE_UPDATE
                           // - AccountTriggerHandler1
                           // - AccountTriggerHandler2
             .bind(new AnotherAccountHandler())
         .afterUpdate()
             .bind(new AnotherAccountHandler())
-            .load('tag1') // load all active handlers with 'tag1' registered under Account AFTER_UPDATE
-                          // - AccountTriggerHandler1
+            .load('tag1') // load all active handlers with 'tag1' under Account AFTER_UPDATE
+                          // - AccountTriggerHandler4
             .bind(new MyAccountHandler())
-            .load('tag2') // load all active handlers with 'tag2' registered under Account AFTER_UPDATE
-                          // - AccountTriggerHandler2
-                          // - AccountTriggerHandler3
+            .load('tag2') // load all active handlers with 'tag2' under Account AFTER_UPDATE
+                          // - AccountTriggerHandler5
+                          // - AccountTriggerHandler6
         .execute();
 }
 ```

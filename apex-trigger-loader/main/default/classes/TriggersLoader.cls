@@ -89,23 +89,23 @@ public class TriggersLoader implements Triggers.Loader {
     }
 
     public List<Triggers.Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent) {
-        return load(sObjectType, triggerEvent, null, true);
+        return load(sObjectType, triggerEvent, null, false);
     }
 
     public List<Triggers.Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag) {
-        return load(sObjectType, triggerEvent, tag, false);
+        return load(sObjectType, triggerEvent, tag, true);
     }
 
     private List<Triggers.Handler> load(
         SObjectType sObjectType,
         TriggerOperation triggerEvent,
         String tag,
-        Boolean alwaysTrue
+        Boolean needCheckTag
     ) {
         List<Triggers.Handler> handlers = new List<Triggers.Handler>();
         if (handlerSettings.containsKey(sObjectType) && handlerSettings.get(sObjectType).containsKey(triggerEvent)) {
             for (Apex_Trigger_Handler_Setting__mdt setting : handlerSettings.get(sObjectType).get(triggerEvent)) {
-                if (alwaysTrue || setting.Tag__c == tag) {
+                if (!needCheckTag || setting.Tag__c == tag) {
                     Type handlerType = Type.forName(setting.Handler_Class__c);
                     if (handlerType == null || !Triggers.Handler.class.isAssignableFrom(handlerType)) {
                         throw new TypeException(

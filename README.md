@@ -75,12 +75,12 @@ trigger AccountTrigger on Account (before update, after update) {
 
 ### 1.2 Bind with Handler Settings
 
-This feature is only available when `ApexTriggerHandlerExt` package is installed, or its metadata is manually deployed. Here are some sample records of `Apex_Trigger_Handler_Setting__mdt`, which can provide fine-grained control of trigger handlers at runtime, such as:
+This feature is only available when `ApexTriggerHandlerExt` package is installed, or its metadata is manually deployed. Here are some sample records of `Apex_Trigger_Handler_Setting__mdt`, which can provide fine-grained control of trigger handler behaviors at runtime, such as:
 
-1. To register trigger handlers for a particular sObject trigger event.
-2. To activate or deactivate trigger handlers on trigger event level.
-3. To reorder trigger handlers registered on trigger event level.
-4. To group trigger handlers for the same trigger event with tags.
+1. To register trigger handlers for a particular sObject trigger event (`SObject__c`, `Trigger_Event__c`, `Handler_Class__c`).
+2. To activate or deactivate trigger handlers (`Active__c`).
+3. To reorder trigger handlers (`Execution_Order__c`).
+4. To optionally group trigger handlers with tags (`Tag__c`).
 
 | SObject\_\_c | Trigger_Event\_\_c | Handler_Class\_\_c     | Execution_Order\_\_c | Tag\_\_c | Active\_\_c |
 | ------------ | ------------------ | ---------------------- | -------------------- | -------- | ----------- |

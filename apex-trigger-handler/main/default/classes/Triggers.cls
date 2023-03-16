@@ -33,40 +33,47 @@
 public class Triggers {
     public static final Boolean WHEN_ALWAYS = true;
     public static final Skips skips = new Skips();
-    public static final Loader LOADER;
 
-    static {
-        Type LoaderType = Type.forName('TriggersLoader');
-        if (LoaderType == null) {
-            LOADER = new NullLoader();
-        } else {
-            LOADER = (Loader) LoaderType.newInstance();
+    @TestVisible
+    private static Loader LOADER {
+        get {
+            if (LOADER == null) {
+                Type LoaderType = Type.forName('TriggersLoader');
+                if (LoaderType == null) {
+                    LOADER = new NullLoader();
+                } else {
+                    LOADER = (Loader) LoaderType.newInstance();
+                }
+            }
+            return LOADER;
         }
+        set;
     }
 
     public static Manager prepare() {
-        return new Manager();
+        return new ManagerImpl();
     }
 
     @TestVisible
     private static Manager prepare(TriggerOperation operationType, List<SObject> oldList, List<SObject> newList) {
         Props props = new Props(operationType, oldList, newList);
-        return new Manager(props);
+        return new ManagerImpl(props);
     }
 
-    public class Manager {
+    @TestVisible
+    private class ManagerImpl implements Manager {
         public final Props props { get; private set; }
         public final Context context { get; private set; }
 
         Boolean canBind = false;
 
         @TestVisible
-        private Manager() {
+        private ManagerImpl() {
             this(new Props());
         }
 
         @TestVisible
-        private Manager(Props props) {
+        private ManagerImpl(Props props) {
             this.props = props;
             this.context = new Context(this.props);
         }
@@ -489,9 +496,10 @@ public class Triggers {
         }
 
         public List<Id> filterChangedAny(List<SObjectField> fields) {
-            Set<Id> changedIds = new Set<Id>();
+            List<Id> changedIds = new List<Id>();
             if (this.isUpdate) {
-                for (Id objectId : this.newMap.keySet()) {
+                for (SObject newObj : this.newList) {
+                    Id objectId = newObj.Id;
                     for (SObjectField field : fields) {
                         if (isChanged(objectId, field)) {
                             changedIds.add(objectId);
@@ -500,7 +508,7 @@ public class Triggers {
                     }
                 }
             }
-            return new List<Id>(changedIds);
+            return changedIds;
         }
 
         public List<Id> filterChangedAll(SObjectField field1, SObjectField field2) {
@@ -512,20 +520,53 @@ public class Triggers {
         }
 
         public List<Id> filterChangedAll(List<SObjectField> fields) {
-            Set<Id> changedIds = new Set<Id>();
+            List<Id> changedIds = new List<Id>();
             if (this.isUpdate) {
-                changedIds = this.newMap.keySet();
-                for (Id objectId : this.newMap.keySet()) {
+                for (SObject newObj : this.newList) {
+                    Id objectId = newObj.Id;
+                    changedIds.add(objectId);
                     for (SObjectField field : fields) {
                         if (!isChanged(objectId, field)) {
-                            changedIds.remove(objectId);
+                            changedIds.remove(changedIds.size() - 1);
                             break;
                         }
                     }
                 }
             }
-            return new List<Id>(changedIds);
+            return changedIds;
         }
+    }
+
+    @TestVisible
+    private class NullLoader implements Loader {
+        public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent) {
+            return new List<Handler>();
+        }
+
+        public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag) {
+            return new List<Handler>();
+        }
+    }
+
+    //===================
+    // #region interfaces
+    public interface Loader {
+        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent);
+        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag);
+    }
+
+    public interface Manager {
+        Manager beforeInsert();
+        Manager afterInsert();
+        Manager beforeUpdate();
+        Manager afterUpdate();
+        Manager beforeDelete();
+        Manager afterDelete();
+        Manager afterUndelete();
+        Manager bind(Handler handler);
+        Manager load();
+        Manager load(String tag);
+        void execute();
     }
 
     public interface Handler {
@@ -559,19 +600,6 @@ public class Triggers {
     public interface AfterUndelete {
         void afterUndelete(Context context);
     }
-
-    public interface Loader {
-        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent);
-        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag);
-    }
-
-    private class NullLoader implements Loader {
-        public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent) {
-            return new List<Handler>();
-        }
-
-        public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag) {
-            return new List<Handler>();
-        }
-    }
+    // #endregion
+    //===================
 }

@@ -1,6 +1,6 @@
 # Apex Trigger Handler
 
-![](https://img.shields.io/badge/version-1.2-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-%3E95%25-brightgreen.svg)
+![](https://img.shields.io/badge/version-1.2.1-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-%3E95%25-brightgreen.svg)
 
 There are already many trigger handler libraries out there, but this one has some different approaches or advantages such as state sharing, built in helper methods etc.
 
@@ -14,44 +14,45 @@ There are already many trigger handler libraries out there, but this one has som
 
 This package is the minimal installation which only includes two classes `Triggers.cls` and `TriggersTest.cls`.
 
-| Environment           | Installation Link                                                                                                                                         | Version |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| Production, Developer | <a target="_blank" href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007Cfg6AAC"><img src="docs/images/deploy-button.png"></a> | ver 1.2 |
-| Sandbox               | <a target="_blank" href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007Cfg6AAC"><img src="docs/images/deploy-button.png"></a>  | ver 1.2 |
+| Environment           | Installation Link                                                                                                                                         | Version   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| Production, Developer | <a target="_blank" href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007CfgQAAS"><img src="docs/images/deploy-button.png"></a> | ver 1.2.1 |
+| Sandbox               | <a target="_blank" href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007CfgQAAS"><img src="docs/images/deploy-button.png"></a>  | ver 1.2.1 |
 
 ### Package ApexTriggerHandlerExt
 
 This package can be optionally installed to extend a new feature ([custom metadata type settings](#12-bind-with-handler-settings)) for the above one. It introduces additional but only one SOQL query to a custom metadata type. If your system already reaches some governor limit around SOQL queries, can consider deploy this one later. **Note**: The above package is required to be installed before this one.
 
-| Environment           | Installation Link                                                                                                                                         | Version |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| Production, Developer | <a target="_blank" href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007CfgBAAS"><img src="docs/images/deploy-button.png"></a> | ver 1.2 |
-| Sandbox               | <a target="_blank" href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007CfgBAAS"><img src="docs/images/deploy-button.png"></a>  | ver 1.2 |
+| Environment           | Installation Link                                                                                                                                         | Version   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| Production, Developer | <a target="_blank" href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007CfgVAAS"><img src="docs/images/deploy-button.png"></a> | ver 1.2.1 |
+| Sandbox               | <a target="_blank" href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007CfgVAAS"><img src="docs/images/deploy-button.png"></a>  | ver 1.2.1 |
 
 ---
 
 ### v1.2 Release Notes
 
 - Support custom metadata type settings to register trigger handlers. ([jump to section](#12-bind-with-handler-settings))
+- **Improve Consistency** (v1.2.1): Ids returned by `props.filterChangedAny` and `props.filterChangedAll` are now in the same Id orders of `props.newList`.
 
 ---
 
 ## Table of Contents
 
 - [1. Trigger](#1-trigger)
-  * [1.1 Bind with Handler Instances](#11-bind-with-handler-instances)
-  * [1.2 Bind with Handler Settings](#12-bind-with-handler-settings)
-  * [1.3 Bind with DI Framework](#13-bind-with-di-framework)
+  - [1.1 Bind with Handler Instances](#11-bind-with-handler-instances)
+  - [1.2 Bind with Handler Settings](#12-bind-with-handler-settings)
+  - [1.3 Bind with DI Framework](#13-bind-with-di-framework)
 - [2. Trigger Handler](#2-trigger-handler)
-  * [2.1 Create Handlers](#21-create-handlers)
-  * [2.2 Skip Handlers](#22-skip-handlers)
+  - [2.1 Create Handlers](#21-create-handlers)
+  - [2.2 Skip Handlers](#22-skip-handlers)
 - [3. Tests](#3-tests)
-  * [3.1 Test with Mockup Data](#31-test-with-mockup-data)
-  * [3.2 Test with Mockup Library](#32-test-with-mockup-library)
+  - [3.1 Test with Mockup Data](#31-test-with-mockup-data)
+  - [3.2 Test with Mockup Library](#32-test-with-mockup-library)
 - [4. APIs](#4-apis)
-  * [4.1 Trigger Handler Interfaces](#41-trigger-handler-interfaces)
-  * [4.2 Triggers.Context](#42-triggerscontext)
-  * [4.3 Triggers.Props](#43-triggersprops)
+  - [4.1 Trigger Handler Interfaces](#41-trigger-handler-interfaces)
+  - [4.2 Triggers.Context](#42-triggerscontext)
+  - [4.3 Triggers.Props](#43-triggersprops)
 - [5. License](#5-license)
 
 ## 1. Trigger
@@ -141,10 +142,12 @@ public class SalesModule extends DI.Module {
 }
 
 public class IMyAccountHandler extends Triggers.Handler {}
-public class MyAccountHandler implements IMyAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
+public class MyAccountHandler implements
+    IMyAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
 
 public class IAnotherAccountHandler extends Triggers.Handler {}
-public class AnotherAccountHandler implements IAnotherAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
+public class AnotherAccountHandler implements
+    IAnotherAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
 ```
 
 ## 2. Trigger Handler

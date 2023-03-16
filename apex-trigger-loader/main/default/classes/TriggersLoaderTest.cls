@@ -83,7 +83,7 @@ public class TriggersLoaderTest {
     static void testBinding_Settings_Exception_ObjectType() {
         TriggersLoader.settings = new List<Apex_Trigger_Handler_Setting__mdt>{
             new Apex_Trigger_Handler_Setting__mdt(
-                SObject__c = 'InvalidAccount',
+                SObject__c = 'XXX___InvalidAccount',
                 Trigger_Event__c = 'BEFORE_INSERT',
                 Handler_Class__c = 'TriggersLoaderTest.AccountTriggerHandler1',
                 Execution_Order__c = 1,
@@ -143,8 +143,8 @@ public class TriggersLoaderTest {
             new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3), Name = 'New Name 3')
         };
 
-        Triggers.Manager triggerManager;
-        triggerManager = Triggers.prepare(TriggerOperation.BEFORE_UPDATE, oldList, newList);
+        Triggers.ManagerImpl triggerManager;
+        triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.BEFORE_UPDATE, oldList, newList);
         triggerManager
             .beforeUpdate()
             .bind(new MiddleTriggerHandler())
@@ -165,7 +165,7 @@ public class TriggersLoaderTest {
         Assert.areEqual(AccountTriggerHandler3.class, handlerTypes[3]);
         Assert.areEqual(MiddleTriggerHandler.class, handlerTypes[4]);
 
-        triggerManager = Triggers.prepare(TriggerOperation.AFTER_UPDATE, oldList, newList);
+        triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.AFTER_UPDATE, oldList, newList);
         triggerManager
             .beforeUpdate()
             .bind(new MiddleTriggerHandler())

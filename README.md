@@ -21,7 +21,7 @@ This package is the minimal installation which only includes two classes `Trigge
 
 ### Package ApexTriggerHandlerExt
 
-This package can be optionally installed to extend a new feature ([custom metadata type settings](#12-bind-with-handler-settings)) for the above one. It introduces additional but only one SOQL query to a custom metadata type. If your system already reaches some governor limit around SOQL queries, can consider deploy this one later. **Note**: The above package is required to be installed before this one.
+This package can be optionally installed to extend the new feature ([custom metadata type settings](#12-bind-with-handler-settings)) for the above one.
 
 | Environment           | Installation Link                                                                                                                                         | Version   |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
@@ -42,7 +42,6 @@ This package can be optionally installed to extend a new feature ([custom metada
 - [1. Trigger](#1-trigger)
   - [1.1 Bind with Handler Instances](#11-bind-with-handler-instances)
   - [1.2 Bind with Handler Settings](#12-bind-with-handler-settings)
-  - [1.3 Bind with DI Framework](#13-bind-with-di-framework)
 - [2. Trigger Handler](#2-trigger-handler)
   - [2.1 Create Handlers](#21-create-handlers)
   - [2.2 Skip Handlers](#22-skip-handlers)
@@ -59,7 +58,7 @@ This package can be optionally installed to extend a new feature ([custom metada
 
 ### 1.1 Bind with Handler Instances
 
-This is an example about how handlers can be registered in triggers. As you have noticed, we are creating same handlers for different trigger events. This is because handlers may need to execute in different orders for different trigger events, we need to provide developers great controls over the order of executions.
+This example demonstrates how handlers can be registered within triggers. Notice that the same handlers are created for different trigger events. This approach allows handlers to execute in varying orders depending on the event, giving developers precise control over the execution sequence.
 
 ```java
 trigger AccountTrigger on Account (before update, after update) {
@@ -75,13 +74,12 @@ trigger AccountTrigger on Account (before update, after update) {
 ```
 
 ### 1.2 Bind with Handler Settings
+This feature is available only when the `ApexTriggerHandlerExt` package is installed or its metadata is manually deployed. The following example records for `Apex_Trigger_Handler_Setting__mdt` demonstrate how you can control trigger handler behavior at runtime with fine granularity, including:
 
-This feature is only available when `ApexTriggerHandlerExt` package is installed, or its metadata is manually deployed. Here are some sample records of `Apex_Trigger_Handler_Setting__mdt`, which can provide fine-grained control of trigger handler behaviors at runtime, such as:
-
-1. To register trigger handlers for a particular sObject trigger event (`SObject__c`, `Trigger_Event__c`, `Handler_Class__c`).
-2. To activate or deactivate trigger handlers (`Active__c`).
-3. To reorder trigger handlers (`Execution_Order__c`).
-4. To optionally group trigger handlers with tags (`Tag__c`).
+1. Registering trigger handlers for specific sObject trigger events (`SObject__c`, `Trigger_Event__c`, `Handler_Class__c`).
+2. Defining the execution order of trigger handlers (`Execution_Order__c`).
+3. Optionally grouping trigger handlers using tags (`Tag__c`).
+4. Activating or deactivating trigger handlers (`Active__c`).
 
 | SObject\_\_c | Trigger_Event\_\_c | Handler_Class\_\_c     | Execution_Order\_\_c | Tag\_\_c | Active\_\_c |
 | ------------ | ------------------ | ---------------------- | -------------------- | -------- | ----------- |
@@ -92,7 +90,7 @@ This feature is only available when `ApexTriggerHandlerExt` package is installed
 | Account      | AFTER_UPDATE       | AccountTriggerHandler5 | 2                    | tag2     | TRUE        |
 | Account      | AFTER_UPDATE       | AccountTriggerHandler6 | 3                    | tag2     | TRUE        |
 
-Two additional APIs are provided to load the handlers from the above settings, `load()` and `load(tag)`. Their usages are explained in the following comments.
+Two additional APIs, `load()` and `load(tag)`, are available for loading handlers based on the settings described above. Their usage is demonstrated in the comments below.
 
 ```java
 trigger AccountTrigger on Account (before update, after update) {
@@ -113,41 +111,6 @@ trigger AccountTrigger on Account (before update, after update) {
                           // - AccountTriggerHandler6
         .execute();
 }
-```
-
-### 1.3 Bind with DI Framework
-
-The following demo is using [Apex DI](https://github.com/apexfarm/ApexDI) as a dependency injection (DI) framework.
-
-```java
-trigger AccountTrigger on Account (before update, after update) {
-    // reference interfaces and decouple trigger from implementations
-    DI.Module salesModule = DI.getModule(SalesModule.class);
-    Triggers.prepare()
-        .beforeUpdate()
-            .bind((Triggers.Handler) salesModule.getService(IMyAccountHandler.class))
-            .bind((Triggers.Handler) salesModule.getService(IAnotherAccountHandler.class))
-        .afterUpdate()
-            .bind((Triggers.Handler) salesModule.getService(IAnotherAccountHandler.class))
-            .bind((Triggers.Handler) salesModule.getService(IMyAccountHandler.class))
-        .execute();
-}
-
-public class SalesModule extends DI.Module {
-    // register handler implementation against interfaces
-    protected overried void configure(DI.ServiceCollection services) {
-        services.addTransient('IMyAccountHandler', 'MyAccountHandler');
-        services.addTransient('IAnotherAccountHandler', 'AnotherAccountHandler');
-    }
-}
-
-public class IMyAccountHandler extends Triggers.Handler {}
-public class MyAccountHandler implements
-    IMyAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
-
-public class IAnotherAccountHandler extends Triggers.Handler {}
-public class AnotherAccountHandler implements
-    IAnotherAccountHandler, Triggers.BeforeUpdate, Triggers.AfterUpdate {}
 ```
 
 ## 2. Trigger Handler

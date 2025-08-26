@@ -22,7 +22,7 @@
     "name": "ApexTriggerHandler",
     "namespace": "",
     "sfdcLoginUrl": "https://login.salesforce.com",
-    "sourceApiVersion": "57.0",
+    "sourceApiVersion": "64.0",
     "packageAliases": {
         "ApexTriggerHandler": "0Ho2v000000PBFvCAO",
         "ApexTriggerHandler@1.2.0-1": "04t2v000007Cfg6AAC",

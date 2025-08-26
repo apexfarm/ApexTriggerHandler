@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>All_Handlers</fullName>
+    <columns>MasterLabel</columns>
+    <columns>SObject__c</columns>
+    <columns>Trigger_Event__c</columns>
+    <columns>Handler_Class__c</columns>
+    <columns>Execution_Order__c</columns>
+    <columns>Tag__c</columns>
+    <columns>Active__c</columns>
+    <filterScope>Everything</filterScope>
+    <label>All Handlers</label>
+</ListView>

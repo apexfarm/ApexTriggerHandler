@@ -1,9 +1,16 @@
 {
   "trailingComma": "none",
+  "plugins": [
+    "prettier-plugin-apex",
+    "@prettier/plugin-xml"
+  ],
   "overrides": [
     {
-      "files": "*.cls",
-      "options": { "tabWidth": 4, "printWidth": 120 }
+      "files": "*.{cls,apex,trigger}",
+      "options": {
+        "tabWidth": 4,
+        "printWidth": 120
+      }
     }
   ]
 }

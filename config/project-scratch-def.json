@@ -2,7 +2,9 @@
   "orgName": "Apex Trigger Handler",
   "edition": "Developer",
   "language": "en_US",
-  "features": ["EnableSetPasswordInApi"],
+  "features": [
+    "EnableSetPasswordInApi"
+  ],
   "settings": {
     "lightningExperienceSettings": {
       "enableS1DesktopEnabled": true

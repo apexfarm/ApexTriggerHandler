@@ -31,6 +31,11 @@
  */
 
 public class TriggersLoader implements Triggers.Loader {
+    public class AccountTriggerState {
+        public Integer counter = 0;
+    }
+    public static AccountTriggerState state = new AccountTriggerState();
+
     @TestVisible
     private static List<Apex_Trigger_Handler_Setting__mdt> settings {
         get {

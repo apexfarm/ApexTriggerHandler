@@ -51,7 +51,8 @@ public class Triggers {
     }
 
     public static Manager prepare() {
-        return new ManagerImpl();
+        Props props = new Props();
+        return new ManagerImpl(props);
     }
 
     @TestVisible
@@ -67,12 +68,6 @@ public class Triggers {
 
         Boolean canBind = false;
 
-        @TestVisible
-        private ManagerImpl() {
-            this(new Props());
-        }
-
-        @TestVisible
         private ManagerImpl(Props props) {
             this.props = props;
             this.context = new Context(this.props);
@@ -206,6 +201,8 @@ public class Triggers {
         }
     }
 
+    // #region Context
+
     public class Context {
         public final Map<Object, Object> state { get; private set; }
         public final Skips skips { get; private set; }
@@ -286,7 +283,7 @@ public class Triggers {
         }
     }
 
-    public class Props {
+    public class Props implements IProps {
         // Standard Properties
         @TestVisible
         public Boolean isExecuting { get; private set; }
@@ -537,6 +534,15 @@ public class Triggers {
         }
     }
 
+    // #endregion Context
+
+    //===================
+    // #region interfaces
+    public interface Loader {
+        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent);
+        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag);
+    }
+
     @TestVisible
     private class NullLoader implements Loader {
         public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent) {
@@ -548,11 +554,25 @@ public class Triggers {
         }
     }
 
-    //===================
-    // #region interfaces
-    public interface Loader {
-        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent);
-        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag);
+    public interface IProps {
+        List<Object> getValues(SObjectField field);
+        Boolean isChanged(SObjectField field1);
+        Boolean isChangedAny(SObjectField field1, SObjectField field2);
+        Boolean isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3);
+        Boolean isChangedAny(List<SObjectField> fields);
+        Boolean isChangedAll(SObjectField field1, SObjectField field2);
+        Boolean isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3);
+        Boolean isChangedAll(List<SObjectField> fields);
+        List<Id> filterChanged(SObjectField field1);
+        List<Id> filterChangedAny(SObjectField field1, SObjectField field2);
+        List<Id> filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3);
+        List<Id> filterChangedAny(List<SObjectField> fields);
+        List<Id> filterChangedAll(SObjectField field1, SObjectField field2);
+        List<Id> filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3);
+        List<Id> filterChangedAll(List<SObjectField> fields);
+    }
+
+    public interface State {
     }
 
     public interface Manager {

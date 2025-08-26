@@ -586,6 +586,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         props.newMap = new Map<Id, Account>(newAccounts);
 
         Assert.areEqual(null, props.sObjectType);
+
         props.setSObjectType();
         Assert.areEqual(Account.SObjectType, props.sObjectType);
     }

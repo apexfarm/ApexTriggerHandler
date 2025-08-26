@@ -108,6 +108,10 @@ public class Triggers {
             return this;
         }
 
+        public Manager bindState(State state) {
+            return this;
+        }
+
         public Manager bind(Handler handler) {
             if (canBind) {
                 Boolean isImplemented = false;
@@ -140,6 +144,26 @@ public class Triggers {
                     this.context.handlers.add(handler);
                 }
             }
+            return this;
+        }
+
+        public Manager bind(List<Handler> handlers) {
+            return this;
+        }
+
+        public Manager bind(String handlerName) {
+            return this;
+        }
+
+        public Manager bind(List<String> handlerNames) {
+            return this;
+        }
+
+        public Manager bind(Type handlerType) {
+            return this;
+        }
+
+        public Manager bind(List<Type> handlerTypes) {
             return this;
         }
 
@@ -404,17 +428,15 @@ public class Triggers {
                 when else {
                 }
             }
-            this.setSize();
-            this.setSObjectType();
-        }
 
-        private void setSize() {
+            //setSize();
             this.size = 0;
             if (this.oldList != null) {
                 this.size = this.oldList.size();
             } else if (this.newList != null) {
                 this.size = this.newList.size();
             }
+            this.setSObjectType();
         }
 
         @TestVisible
@@ -583,9 +605,19 @@ public class Triggers {
         Manager beforeDelete();
         Manager afterDelete();
         Manager afterUndelete();
+
+        Manager bindState(State state);
+
         Manager bind(Handler handler);
+        Manager bind(List<Handler> handlers);
+        Manager bind(String handlerName);
+        Manager bind(List<String> handlerNames);
+        Manager bind(Type handlerType);
+        Manager bind(List<Type> handlerTypes);
+
         Manager load();
         Manager load(String tag);
+
         void execute();
     }
 

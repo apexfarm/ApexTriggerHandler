@@ -1,11 +1,13 @@
 trigger AccountTrigger on Account (before update, after update) {
+
     Triggers.prepare()
-        .beforeUpdate(state)
-            .bind(MyAccountHandler.class)
-            .bind(AnotherAccountHandler.class)
-        .afterUpdate(state)
-            .bind(MyAccountHandler.class)
-            .bind(AnotherAccountHandler.class)
+        .beforeUpdate()
+            .bindState(state)
+            .bind('MyAccountHandler')
+            .bind('AnotherAccountHandler')
+        .afterUpdate()
+            .bind('MyAccountHandler')
+            .bind('AnotherAccountHandler')
         .execute();
 }
 

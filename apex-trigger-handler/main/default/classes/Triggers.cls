@@ -32,7 +32,8 @@
 
 public class Triggers {
     public static final Boolean WHEN_ALWAYS = true;
-    public static final Skips skips = new Skips();
+    public static final SkipsImpl skips = new SkipsImpl();
+    public static final StateImpl state = new StateImpl();
 
     @TestVisible
     private static Loader LOADER {
@@ -108,58 +109,50 @@ public class Triggers {
             return this;
         }
 
-        public Manager bindState(State state) {
-            return this;
-        }
+        public Manager bind(Type handlerType) {
+            if (handlerType == null) {
+                return this;
+            }
 
-        public Manager bind(Handler handler) {
-            if (canBind) {
-                Boolean isImplemented = false;
-                switch on this.props.operationType {
-                    when BEFORE_INSERT {
-                        isImplemented = handler instanceof BeforeInsert;
-                    }
-                    when AFTER_INSERT {
-                        isImplemented = handler instanceof AfterInsert;
-                    }
-                    when BEFORE_UPDATE {
-                        isImplemented = handler instanceof BeforeUpdate;
-                    }
-                    when AFTER_UPDATE {
-                        isImplemented = handler instanceof AfterUpdate;
-                    }
-                    when BEFORE_DELETE {
-                        isImplemented = handler instanceof BeforeDelete;
-                    }
-                    when AFTER_DELETE {
-                        isImplemented = handler instanceof AfterDelete;
-                    }
-                    when AFTER_UNDELETE {
-                        isImplemented = handler instanceof AfterUndelete;
-                    }
-                    when else {
-                    }
+            if (!canBind) {
+                return this;
+            }
+
+            if (!Handler.class.isAssignableFrom(handlerType)) {
+                throw new IllegalArgumentException('Type [' + handlerType + '] is not a Handler type.');
+            }
+
+            Boolean isImplemented = false;
+            switch on this.props.operationType {
+                when BEFORE_INSERT {
+                    isImplemented = BeforeInsert.class.isAssignableFrom(handlerType);
                 }
-                if (isImplemented) {
-                    this.context.handlers.add(handler);
+                when AFTER_INSERT {
+                    isImplemented = AfterInsert.class.isAssignableFrom(handlerType);
+                }
+                when BEFORE_UPDATE {
+                    isImplemented = BeforeUpdate.class.isAssignableFrom(handlerType);
+                }
+                when AFTER_UPDATE {
+                    isImplemented = AfterUpdate.class.isAssignableFrom(handlerType);
+                }
+                when BEFORE_DELETE {
+                    isImplemented = BeforeDelete.class.isAssignableFrom(handlerType);
+                }
+                when AFTER_DELETE {
+                    isImplemented = AfterDelete.class.isAssignableFrom(handlerType);
+                }
+                when AFTER_UNDELETE {
+                    isImplemented = AfterUndelete.class.isAssignableFrom(handlerType);
+                }
+                when else {
                 }
             }
-            return this;
-        }
 
-        public Manager bind(List<Handler> handlers) {
-            return this;
-        }
+            if (isImplemented) {
+                this.context.handlerTypes.add(handlerType);
+            }
 
-        public Manager bind(String handlerName) {
-            return this;
-        }
-
-        public Manager bind(List<String> handlerNames) {
-            return this;
-        }
-
-        public Manager bind(Type handlerType) {
             return this;
         }
 
@@ -167,22 +160,39 @@ public class Triggers {
             return this;
         }
 
+        public Manager bind(String handlerName) {
+            if (String.isBlank(handlerName)) {
+                return this;
+            }
+
+            if (!canBind) {
+                return this;
+            }
+
+            Type handlerType = Type.forName(handlerName);
+            return this.bind(handlerType);
+        }
+
+        public Manager bind(List<String> handlerNames) {
+            return this;
+        }
+
         public Manager load() {
             if (canBind) {
-                List<Handler> handlers = LOADER.load(this.props.sObjectType, this.props.operationType);
-                for (Handler handler : handlers) {
-                    this.bind(handler);
-                }
+                // List<Handler> handlers = LOADER.load(this.props.sObjectType, this.props.operationType);
+                // for (Handler handler : handlers) {
+                //     this.bind(handler);
+                // }
             }
             return this;
         }
 
         public Manager load(String tag) {
             if (canBind) {
-                List<Handler> handlers = LOADER.load(this.props.sObjectType, this.props.operationType, tag);
-                for (Handler handler : handlers) {
-                    this.bind(handler);
-                }
+                // List<Handler> handlers = LOADER.load(this.props.sObjectType, this.props.operationType, tag);
+                // for (Handler handler : handlers) {
+                //     this.bind(handler);
+                // }
             }
             return this;
         }
@@ -193,7 +203,7 @@ public class Triggers {
         }
     }
 
-    public class Skips {
+    public class SkipsImpl implements Skips {
         @TestVisible
         private final Set<Type> skippedHandlers = new Set<Type>();
 
@@ -225,33 +235,60 @@ public class Triggers {
         }
     }
 
+    public class StateImpl implements State {
+        private final Map<Type, Object> states = new Map<Type, Object>();
+
+        public Boolean contains(Type stateType) {
+            return this.states.containsKey(stateType);
+        }
+
+        public void remove(Type stateType) {
+            this.states.remove(stateType);
+        }
+
+        public void clear() {
+            this.states.clear();
+        }
+
+        public void put(Type stateType, Object state) {
+            if (stateType == null || state == null) {
+                return;
+            }
+
+            this.states.put(stateType, state);
+        }
+
+        public Object get(Type stateType) {
+            if (stateType == null) {
+                return null;
+            }
+
+            if (!this.states.containsKey(stateType)) {
+                State state = (State) stateType.newInstance();
+                this.states.put(stateType, state);
+            }
+            return this.states.get(stateType);
+        }
+    }
+
     // #region Context
-
-    public class Context {
-        public final Map<Object, Object> state { get; private set; }
-        public final Skips skips { get; private set; }
+    public class Context implements IContext {
+        public final SkipsImpl skips { get; private set; }
         public final Props props { get; private set; }
+        public final State state { get; private set; }
 
-        private final List<Handler> handlers = new List<Handler>();
+        private final List<Type> handlerTypes = new List<Type>();
         private Integer currIndex = -1;
         private Boolean isExecutingCriteria = false;
 
         private Context(Props props) {
-            this.props = props;
-            this.state = new Map<Object, Object>();
             this.skips = Triggers.skips;
-        }
-
-        private void reset() {
-            this.currIndex = -1;
+            this.state = Triggers.state;
+            this.props = props;
         }
 
         public void stop() {
-            this.currIndex = this.handlers.size();
-        }
-
-        private Boolean hasNext() {
-            return this.currIndex < this.handlers.size() - 1;
+            this.currIndex = this.handlerTypes.size();
         }
 
         public void next() {
@@ -270,9 +307,19 @@ public class Triggers {
             }
         }
 
+        private void reset() {
+            this.currIndex = -1;
+        }
+
+        private Boolean hasNext() {
+            return this.currIndex < this.handlerTypes.size() - 1;
+        }
+
         private void runNext() {
             this.currIndex++;
-            Handler handler = this.handlers[this.currIndex];
+            Type handlerType = this.handlerTypes[this.currIndex];
+            Handler handler = (Handler) handlerType.newInstance();
+
             this.isExecutingCriteria = true;
             if (!this.skips.contains(handler) && handler.criteria(this) == true) {
                 this.isExecutingCriteria = false;
@@ -448,22 +495,6 @@ public class Triggers {
             }
         }
 
-        public List<Object> getValues(SObjectField field) {
-            List<Object> values = new List<Object>();
-            List<SObject> objects = new List<SObject>();
-
-            if (this.isInsert || this.isUpdate || this.isUndelete) {
-                objects = this.newList;
-            } else if (this.isDelete) {
-                objects = this.oldList;
-            }
-
-            for (SObject obj : objects) {
-                values.add(obj.get(field));
-            }
-            return values;
-        }
-
         @TestVisible
         private Boolean isChanged(Id objectId, SObjectField field) {
             if (this.isUpdate) {
@@ -554,6 +585,71 @@ public class Triggers {
             }
             return changedIds;
         }
+
+        public Boolean containsRecordTypeNames(List<String> recordTypeNames) {
+            return null;
+        }
+
+        public Boolean contains(SObjectField field, List<Object> values) {
+            if (values == null || values.isEmpty()) {
+                return false;
+            }
+
+            List<SObject> objects = new List<SObject>();
+            if (this.isInsert || this.isUpdate || this.isUndelete) {
+                objects = this.newList;
+            } else if (this.isDelete) {
+                objects = this.oldList;
+            }
+
+            for (SObject obj : objects) {
+                if (values.contains(obj.get(field))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public List<Id> filterByRecordTypeNames(List<String> recordTypeNames) {
+            return null;
+        }
+
+        public List<Id> filterBy(SObjectField field, List<Object> values) {
+            List<Id> matchedIds = new List<Id>();
+            if (values == null || values.isEmpty()) {
+                return matchedIds;
+            }
+
+            List<SObject> objects = new List<SObject>();
+            if (this.isInsert || this.isUpdate || this.isUndelete) {
+                objects = this.newList;
+            } else if (this.isDelete) {
+                objects = this.oldList;
+            }
+
+            for (SObject obj : objects) {
+                if (values.contains(obj.get(field))) {
+                    matchedIds.add(obj.Id);
+                }
+            }
+            return matchedIds;
+        }
+
+        public List<Object> getValues(SObjectField field) {
+            List<Object> values = new List<Object>();
+
+            List<SObject> objects = new List<SObject>();
+            if (this.isInsert || this.isUpdate || this.isUndelete) {
+                objects = this.newList;
+            } else if (this.isDelete) {
+                objects = this.oldList;
+            }
+
+            for (SObject obj : objects) {
+                values.add(obj.get(field));
+            }
+            return values;
+        }
     }
 
     // #endregion Context
@@ -576,8 +672,14 @@ public class Triggers {
         }
     }
 
+    public interface IContext {
+        void stop();
+        void next();
+    }
+
     public interface IProps {
         List<Object> getValues(SObjectField field);
+
         Boolean isChanged(SObjectField field1);
         Boolean isChangedAny(SObjectField field1, SObjectField field2);
         Boolean isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3);
@@ -585,6 +687,9 @@ public class Triggers {
         Boolean isChangedAll(SObjectField field1, SObjectField field2);
         Boolean isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3);
         Boolean isChangedAll(List<SObjectField> fields);
+        Boolean containsRecordTypeNames(List<String> recordTypeNames);
+        Boolean contains(SObjectField field, List<Object> values);
+
         List<Id> filterChanged(SObjectField field1);
         List<Id> filterChangedAny(SObjectField field1, SObjectField field2);
         List<Id> filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3);
@@ -592,9 +697,23 @@ public class Triggers {
         List<Id> filterChangedAll(SObjectField field1, SObjectField field2);
         List<Id> filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3);
         List<Id> filterChangedAll(List<SObjectField> fields);
+        List<Id> filterByRecordTypeNames(List<String> recordTypeNames);
+        List<Id> filterBy(SObjectField field, List<Object> values);
     }
 
     public interface State {
+        Object get(Type stateType);
+        void put(Type stateType, Object state);
+        Boolean contains(Type stateType);
+        void remove(Type stateType);
+        void clear();
+    }
+
+    public interface Skips {
+        void add(type handlerType);
+        Boolean contains(type handlerType);
+        void remove(type handlerType);
+        void clear();
     }
 
     public interface Manager {
@@ -606,14 +725,10 @@ public class Triggers {
         Manager afterDelete();
         Manager afterUndelete();
 
-        Manager bindState(State state);
-
-        Manager bind(Handler handler);
-        Manager bind(List<Handler> handlers);
-        Manager bind(String handlerName);
-        Manager bind(List<String> handlerNames);
         Manager bind(Type handlerType);
         Manager bind(List<Type> handlerTypes);
+        Manager bind(String handlerName);
+        Manager bind(List<String> handlerNames);
 
         Manager load();
         Manager load(String tag);
@@ -625,31 +740,31 @@ public class Triggers {
         Boolean criteria(Context context);
     }
 
-    public interface BeforeInsert {
+    public interface BeforeInsert extends Handler {
         void beforeInsert(Context context);
     }
 
-    public interface AfterInsert {
+    public interface AfterInsert extends Handler {
         void afterInsert(Context context);
     }
 
-    public interface BeforeUpdate {
+    public interface BeforeUpdate extends Handler {
         void beforeUpdate(Context context);
     }
 
-    public interface AfterUpdate {
+    public interface AfterUpdate extends Handler {
         void afterUpdate(Context context);
     }
 
-    public interface BeforeDelete {
+    public interface BeforeDelete extends Handler {
         void beforeDelete(Context context);
     }
 
-    public interface AfterDelete {
+    public interface AfterDelete extends Handler {
         void afterDelete(Context context);
     }
 
-    public interface AfterUndelete {
+    public interface AfterUndelete extends Handler {
         void afterUndelete(Context context);
     }
     // #endregion

@@ -48,7 +48,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
 
     @IsTest
     static void testSkips_getHandlerName_ByType() {
-        Triggers.Skips skips = new Triggers.Skips();
+        Triggers.SkipsImpl skips = new Triggers.SkipsImpl();
         skips.add(String.class);
         Assert.areEqual(true, skips.contains(String.class));
 
@@ -71,22 +71,22 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     static void testBinding_BaseLine() {
         Triggers.prepare()
             .beforeInsert()
-                .bind(new MainHandler())
+                .bind(MainHandler.class)
             .beforeUpdate()
-                .bind(new MainHandler())
+                .bind(MainHandler.class)
             .beforeDelete()
-                .bind(new MainHandler())
+                .bind(MainHandler.class)
             .execute();
 
         Triggers.prepare()
             .afterInsert()
-                .bind(new MainHandler())
+                .bind(MainHandler.class)
             .afterUpdate()
-                .bind(new MainHandler())
+                .bind(MainHandler.class)
             .afterDelete()
-                .bind(new MainHandler())
+                .bind(MainHandler.class)
             .afterUndelete()
-                .bind(new MainHandler())
+                .bind(MainHandler.class)
             .execute();
     }
 
@@ -106,60 +106,64 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     static void testBinding_Stop_BeforeInsert() {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
         triggerManager.beforeInsert()
-            .bind(new FirstHandler())
-            .bind(new MainHandler())
-            .bind(new MainHandler())
-            .bind(new StopHandler())
-            .bind(new MainHandler())
-            .bind(new LastHandler())
+            .bind(FirstHandler.class)
+            .bind(MainHandler.class)
+            .bind(MainHandler.class)
+            .bind(StopHandler.class)
+            .bind(MainHandler.class)
+            .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
     static void testBinding_Stop_AfterInsert() {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.AFTER_INSERT, null, null);
         triggerManager.afterInsert()
-            .bind(new FirstHandler())
-            .bind(new MainHandler())
-            .bind(new MainHandler())
-            .bind(new StopHandler())
-            .bind(new MainHandler())
-            .bind(new LastHandler())
+            .bind(FirstHandler.class)
+            .bind(MainHandler.class)
+            .bind(MainHandler.class)
+            .bind(StopHandler.class)
+            .bind(MainHandler.class)
+            .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
     static void testBinding_Inactive_BeforeInsert() {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
         triggerManager.beforeInsert()
-            .bind(new FirstHandler())
-            .bind(new MainHandler())
-            .bind(new InactiveHandler())
-            .bind(new MainHandler())
-            .bind(new LastHandler())
+            .bind(FirstHandler.class)
+            .bind(MainHandler.class)
+            .bind(InactiveHandler.class)
+            .bind(MainHandler.class)
+            .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
     static void testBinding_Skip_Remove() {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
         triggerManager.beforeInsert()
-            .bind(new FirstHandler())
-            .bind(new MainHandler())
-            .bind(new AddSkippedHandler())
-            .bind(new TriggersTest())
-            .bind(new RemoveSkippedHandler())
-            .bind(new TriggersTest())
-            .bind(new LastHandler())
+            .bind(FirstHandler.class)
+            .bind(MainHandler.class)
+            .bind(AddSkippedHandler.class)
+            .bind(TriggersTest.class)
+            .bind(RemoveSkippedHandler.class)
+            .bind(TriggersTest.class)
+            .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
@@ -167,16 +171,17 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
         triggerManager
             .beforeInsert()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new AddSkippedHandler())
-                .bind(new TriggersTest())
-                .bind(new ClearSkippedHandler())
-                .bind(new TriggersTest())
-                .bind(new LastHandler())
+                .bind(FirstHandler.class)
+                .bind(MainHandler.class)
+                .bind(AddSkippedHandler.class)
+                .bind(TriggersTest.class)
+                .bind(ClearSkippedHandler.class)
+                .bind(TriggersTest.class)
+                .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
     // #endregion
     // ====================
@@ -189,13 +194,14 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
             TriggerOperation.BEFORE_INSERT, new List<SObject>{}, new List<SObject>());
         triggerManager
             .beforeInsert()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+                .bind(FirstHandler.class)
+                .bind(MainHandler.class)
+                .bind(MainHandler.class)
+                .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
@@ -203,13 +209,14 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.AFTER_INSERT, null, null);
         triggerManager
             .afterInsert()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+                .bind(FirstHandler.class)
+                .bind(MainHandler.class)
+                .bind(MainHandler.class)
+                .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
@@ -218,13 +225,14 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
             TriggerOperation.BEFORE_UPDATE, new List<SObject>(), new List<SObject>());
         triggerManager
             .beforeUpdate()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+                .bind(FirstHandler.class)
+                .bind(MainHandler.class)
+                .bind(MainHandler.class)
+                .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
@@ -233,13 +241,14 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
             TriggerOperation.AFTER_UPDATE, new List<SObject> (), new List<SObject> ());
         triggerManager
             .afterUpdate()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+                .bind(FirstHandler.class)
+                .bind(MainHandler.class)
+                .bind(MainHandler.class)
+                .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
@@ -247,13 +256,14 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.BEFORE_DELETE, null, null);
         triggerManager
             .beforeDelete()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+                .bind(FirstHandler.class)
+                .bind(MainHandler.class)
+                .bind(MainHandler.class)
+                .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
@@ -261,13 +271,14 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.AFTER_DELETE, null, null);
         triggerManager
             .afterDelete()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+                .bind(FirstHandler.class)
+                .bind(MainHandler.class)
+                .bind(MainHandler.class)
+                .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
@@ -275,13 +286,14 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.AFTER_UNDELETE, null, null);
         triggerManager
             .afterUndelete()
-                .bind(new FirstHandler())
-                .bind(new MainHandler())
-                .bind(new MainHandler())
-                .bind(new LastHandler())
+                .bind(FirstHandler.class)
+                .bind(MainHandler.class)
+                .bind(MainHandler.class)
+                .bind(LastHandler.class)
         .execute();
 
-        Assert.areEqual(4, triggerManager.context.state.get('counter'));
+        CounterState state = (CounterState) Triggers.state.get(CounterState.class);
+        Assert.areEqual(4, state.counter);
     }
 
     @IsTest
@@ -298,37 +310,37 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
 
         Triggers.prepare(TriggerOperation.BEFORE_INSERT, oldList, newList)
             .afterUpdate()
-                .bind(new AccountNameChangedHandler())
+                .bind(AccountNameChangedHandler.class)
         .execute();
 
         Triggers.prepare(TriggerOperation.AFTER_INSERT, oldList, newList)
             .afterUpdate()
-                .bind(new AccountNameChangedHandler())
+                .bind(AccountNameChangedHandler.class)
         .execute();
 
         Triggers.prepare(TriggerOperation.BEFORE_UPDATE, oldList, newList)
             .afterUpdate()
-                .bind(new AccountNameChangedHandler())
+                .bind(AccountNameChangedHandler.class)
         .execute();
 
         Triggers.prepare(TriggerOperation.AFTER_UPDATE, oldList, newList)
             .afterUpdate()
-                .bind(new AccountNameChangedHandler())
+                .bind(AccountNameChangedHandler.class)
         .execute();
 
         Triggers.prepare(TriggerOperation.BEFORE_DELETE, oldList, newList)
             .afterUpdate()
-                .bind(new AccountNameChangedHandler())
+                .bind(AccountNameChangedHandler.class)
         .execute();
 
         Triggers.prepare(TriggerOperation.AFTER_DELETE, oldList, newList)
             .afterUpdate()
-                .bind(new AccountNameChangedHandler())
+                .bind(AccountNameChangedHandler.class)
         .execute();
 
         Triggers.prepare(TriggerOperation.AFTER_UNDELETE, oldList, newList)
             .afterUpdate()
-                .bind(new AccountNameChangedHandler())
+                .bind(AccountNameChangedHandler.class)
         .execute();
     }
     // #endregion
@@ -633,9 +645,14 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     }
 
     public void beforeInsert(Triggers.Context context) {
-        context.state.put('counter', (Integer)context.state.get('counter') + 1);
+        CounterState state = (CounterState) context.state.get(CounterState.class);
+        ++state.counter;
         context.next();
-        context.state.put('counter', (Integer)context.state.get('counter') + 1);
+        ++state.counter;
+    }
+
+    public class CounterState {
+        public Integer counter = -2;
     }
 
     public class FirstHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
@@ -647,12 +664,16 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         }
 
         private void then(Triggers.Context context) {
-            if (context.state.get('counter') == null) {
-                context.state.put('counter', 0);
+            if (!context.state.contains(CounterState.class)) {
+                context.state.put(CounterState.class, new CounterState());
             }
-            Assert.areEqual(0, context.state.get('counter'));
+
+            CounterState state = (CounterState) context.state.get(CounterState.class);
+            state.counter = 0;
+
+            Assert.areEqual(0, state.counter);
             context.next();
-            Assert.areEqual(4, context.state.get('counter'));
+            Assert.areEqual(4,  state.counter);
         }
 
         public void beforeInsert(Triggers.Context context) {
@@ -693,9 +714,10 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         }
 
         private void then(Triggers.Context context) {
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+            CounterState state = (CounterState) context.state.get(CounterState.class);
+            ++state.counter;
             context.next();
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+            ++state.counter;
         }
 
         public void beforeInsert(Triggers.Context context) {
@@ -755,9 +777,10 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         }
 
         private void then(Triggers.Context context) {
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+            CounterState state = (CounterState) context.state.get(CounterState.class);
+            ++state.counter;
             context.next();
-            context.state.put('counter', (Integer)context.state.get('counter') + 1);
+            ++state.counter;
         }
 
         public void beforeInsert(Triggers.Context context) {
@@ -821,9 +844,10 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         }
 
         private void then(Triggers.Context context) {
-            Assert.areEqual(2, context.state.get('counter'));
+            CounterState state = (CounterState) context.state.get(CounterState.class);
+            Assert.areEqual(2, state.counter);
             context.next();
-            Assert.areEqual(2, context.state.get('counter'));
+            Assert.areEqual(2, state.counter);
         }
 
         public void beforeInsert(Triggers.Context context) {

@@ -31,20 +31,17 @@
  */
 
 public class TriggersLoader implements Triggers.Loader {
-    public class AccountTriggerState {
-        public Integer counter = 0;
-    }
-    public static AccountTriggerState state = new AccountTriggerState();
+    private final static Map<String, Type> HANDLER_TYPES = new Map<String, Type>();
 
     @TestVisible
-    private static List<Apex_Trigger_Handler_Setting__mdt> settings {
+    private static List<TriggerHandlerRegistry__mdt> settings {
         get {
             if (settings == null) {
                 settings = [
-                    SELECT Id, Label, SObject__c, Trigger_Event__c, Handler_Class__c, Execution_Order__c, Tag__c
-                    FROM Apex_Trigger_Handler_Setting__mdt
+                    SELECT Id, Label, SObject__c, TriggerEvent__c, HandlerClass__c, ExecutionOrder__c, Tag__c
+                    FROM TriggerHandlerRegistry__mdt
                     WHERE Active__c = TRUE
-                    ORDER BY SObject__c, Trigger_Event__c, Execution_Order__c
+                    ORDER BY SObject__c, TriggerEvent__c, ExecutionOrder__c
                 ];
             }
             return settings;
@@ -52,39 +49,32 @@ public class TriggersLoader implements Triggers.Loader {
         set;
     }
 
-    private static Map<SObjectType, Map<TriggerOperation, List<Apex_Trigger_Handler_Setting__mdt>>> handlerSettings {
+    private static Map<String, Map<TriggerOperation, List<TriggerHandlerRegistry__mdt>>> handlerSettings {
         get {
             if (handlerSettings == null) {
-                handlerSettings = new Map<SObjectType, Map<TriggerOperation, List<Apex_Trigger_Handler_Setting__mdt>>>();
-                SObjectType preObjectType = null;
+                handlerSettings = new Map<String, Map<TriggerOperation, List<TriggerHandlerRegistry__mdt>>>();
+
+                String preSObjectName = null;
                 TriggerOperation preTriggerEvent = null;
-                for (Apex_Trigger_Handler_Setting__mdt setting : settings) {
-                    SObjectType objectType = Schema.getGlobalDescribe().get(setting.SObject__c);
-                    if (objectType == null) {
-                        throw new TypeException(
-                            'Apex Trigger Handler Setting [' +
-                                setting.Label +
-                                '] doesn\'t have a valid SObject__c [' +
-                                setting.SObject__c +
-                                '].'
-                        );
-                    } else if (preObjectType != objectType) {
-                        preObjectType = objectType;
+
+                for (TriggerHandlerRegistry__mdt setting : settings) {
+                    String sObjectName = setting.SObject__c;
+                    if (preSObjectName != sObjectName) {
+                        preSObjectName = sObjectName;
                         preTriggerEvent = null;
                         handlerSettings.put(
-                            objectType,
-                            new Map<TriggerOperation, List<Apex_Trigger_Handler_Setting__mdt>>()
+                            sObjectName,
+                            new Map<TriggerOperation, List<TriggerHandlerRegistry__mdt>>()
                         );
                     }
 
-                    TriggerOperation triggerEvent = TriggerOperation.valueOf(setting.Trigger_Event__c);
+                    TriggerOperation triggerEvent = TriggerOperation.valueOf(setting.TriggerEvent__c);
                     if (preTriggerEvent != triggerEvent) {
                         preTriggerEvent = triggerEvent;
-                        handlerSettings.get(objectType)
-                            .put(triggerEvent, new List<Apex_Trigger_Handler_Setting__mdt>());
+                        handlerSettings.get(sObjectName).put(triggerEvent, new List<TriggerHandlerRegistry__mdt>());
                     }
 
-                    handlerSettings.get(objectType).get(triggerEvent).add(setting);
+                    handlerSettings.get(sObjectName).get(triggerEvent).add(setting);
                 }
             }
 
@@ -94,33 +84,37 @@ public class TriggersLoader implements Triggers.Loader {
     }
 
     public List<Triggers.Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent) {
-        return load(sObjectType, triggerEvent, null, false);
+        return load(sObjectType.toString(), triggerEvent, null, false);
     }
 
     public List<Triggers.Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag) {
-        return load(sObjectType, triggerEvent, tag, true);
+        return load(sObjectType.toString(), triggerEvent, tag, true);
     }
 
     private List<Triggers.Handler> load(
-        SObjectType sObjectType,
+        String sObjectName,
         TriggerOperation triggerEvent,
         String tag,
         Boolean needCheckTag
     ) {
         List<Triggers.Handler> handlers = new List<Triggers.Handler>();
-        if (handlerSettings.containsKey(sObjectType) && handlerSettings.get(sObjectType).containsKey(triggerEvent)) {
-            for (Apex_Trigger_Handler_Setting__mdt setting : handlerSettings.get(sObjectType).get(triggerEvent)) {
+        if (handlerSettings.containsKey(sObjectName) && handlerSettings.get(sObjectName).containsKey(triggerEvent)) {
+            for (TriggerHandlerRegistry__mdt setting : handlerSettings.get(sObjectName).get(triggerEvent)) {
                 if (!needCheckTag || setting.Tag__c == tag) {
-                    Type handlerType = Type.forName(setting.Handler_Class__c);
-                    if (handlerType == null || !Triggers.Handler.class.isAssignableFrom(handlerType)) {
-                        throw new TypeException(
-                            'Apex Trigger Handler Setting [' +
-                                setting.Label +
-                                '] doesn\'t have a valid Handler_Class__c [' +
-                                setting.Handler_Class__c +
-                                '].'
-                        );
+                    if (!HANDLER_TYPES.containsKey(setting.HandlerClass__c)) {
+                        Type handlerType = Type.forName(setting.HandlerClass__c);
+                        if (handlerType == null || !Triggers.Handler.class.isAssignableFrom(handlerType)) {
+                            throw new TypeException(
+                                'Apex Trigger Handler Setting [' +
+                                    setting.Label +
+                                    '] doesn\'t have a valid HandlerClass__c [' +
+                                    setting.HandlerClass__c +
+                                    '].'
+                            );
+                        }
+                        HANDLER_TYPES.put(setting.HandlerClass__c, handlerType);
                     }
+                    Type handlerType = HANDLER_TYPES.get(setting.HandlerClass__c);
                     handlers.add((Triggers.Handler) handlerType.newInstance());
                 }
             }

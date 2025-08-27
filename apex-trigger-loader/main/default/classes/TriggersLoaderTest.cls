@@ -33,47 +33,47 @@
 @isTest
 public class TriggersLoaderTest {
     static {
-        TriggersLoader.settings = new List<Apex_Trigger_Handler_Setting__mdt>{
-            new Apex_Trigger_Handler_Setting__mdt(
+        TriggersLoader.settings = new List<TriggerHandlerRegistry__mdt>{
+            new TriggerHandlerRegistry__mdt(
                 SObject__c = 'Account',
-                Trigger_Event__c = 'BEFORE_UPDATE',
-                Handler_Class__c = 'TriggersLoaderTest.AccountTriggerHandler1',
-                Execution_Order__c = 1,
+                TriggerEvent__c = 'BEFORE_UPDATE',
+                HandlerClass__c = 'TriggersLoaderTest.AccountTriggerHandler1',
+                ExecutionOrder__c = 1,
                 Tag__c = 'tag1'
             ),
-            new Apex_Trigger_Handler_Setting__mdt(
+            new TriggerHandlerRegistry__mdt(
                 SObject__c = 'Account',
-                Trigger_Event__c = 'BEFORE_UPDATE',
-                Handler_Class__c = 'TriggersLoaderTest.AccountTriggerHandler2',
-                Execution_Order__c = 2,
+                TriggerEvent__c = 'BEFORE_UPDATE',
+                HandlerClass__c = 'TriggersLoaderTest.AccountTriggerHandler2',
+                ExecutionOrder__c = 2,
                 Tag__c = 'tag2'
             ),
-            new Apex_Trigger_Handler_Setting__mdt(
+            new TriggerHandlerRegistry__mdt(
                 SObject__c = 'Account',
-                Trigger_Event__c = 'BEFORE_UPDATE',
-                Handler_Class__c = 'TriggersLoaderTest.AccountTriggerHandler3',
-                Execution_Order__c = 3,
+                TriggerEvent__c = 'BEFORE_UPDATE',
+                HandlerClass__c = 'TriggersLoaderTest.AccountTriggerHandler3',
+                ExecutionOrder__c = 3,
                 Tag__c = null
             ),
-            new Apex_Trigger_Handler_Setting__mdt(
+            new TriggerHandlerRegistry__mdt(
                 SObject__c = 'Account',
-                Trigger_Event__c = 'AFTER_UPDATE',
-                Handler_Class__c = 'TriggersLoaderTest.AccountTriggerHandler3',
-                Execution_Order__c = 1,
+                TriggerEvent__c = 'AFTER_UPDATE',
+                HandlerClass__c = 'TriggersLoaderTest.AccountTriggerHandler3',
+                ExecutionOrder__c = 1,
                 Tag__c = 'tag1'
             ),
-            new Apex_Trigger_Handler_Setting__mdt(
+            new TriggerHandlerRegistry__mdt(
                 SObject__c = 'Account',
-                Trigger_Event__c = 'AFTER_UPDATE',
-                Handler_Class__c = 'TriggersLoaderTest.AccountTriggerHandler2',
-                Execution_Order__c = 2,
+                TriggerEvent__c = 'AFTER_UPDATE',
+                HandlerClass__c = 'TriggersLoaderTest.AccountTriggerHandler2',
+                ExecutionOrder__c = 2,
                 Tag__c = 'tag1'
             ),
-            new Apex_Trigger_Handler_Setting__mdt(
+            new TriggerHandlerRegistry__mdt(
                 SObject__c = 'Account',
-                Trigger_Event__c = 'AFTER_UPDATE',
-                Handler_Class__c = 'TriggersLoaderTest.AccountTriggerHandler1',
-                Execution_Order__c = 3,
+                TriggerEvent__c = 'AFTER_UPDATE',
+                HandlerClass__c = 'TriggersLoaderTest.AccountTriggerHandler1',
+                ExecutionOrder__c = 3,
                 Tag__c = 'tag2'
             )
         };
@@ -81,12 +81,12 @@ public class TriggersLoaderTest {
 
     @IsTest
     static void testBinding_Settings_Exception_ObjectType() {
-        TriggersLoader.settings = new List<Apex_Trigger_Handler_Setting__mdt>{
-            new Apex_Trigger_Handler_Setting__mdt(
+        TriggersLoader.settings = new List<TriggerHandlerRegistry__mdt>{
+            new TriggerHandlerRegistry__mdt(
                 SObject__c = 'XXX___InvalidAccount',
-                Trigger_Event__c = 'BEFORE_INSERT',
-                Handler_Class__c = 'TriggersLoaderTest.AccountTriggerHandler1',
-                Execution_Order__c = 1,
+                TriggerEvent__c = 'BEFORE_INSERT',
+                HandlerClass__c = 'TriggersLoaderTest.AccountTriggerHandler1',
+                ExecutionOrder__c = 1,
                 Tag__c = null
             )
         };
@@ -106,12 +106,12 @@ public class TriggersLoaderTest {
 
     @IsTest
     static void testBinding_Settings_Exception_HandlerClass() {
-        TriggersLoader.settings = new List<Apex_Trigger_Handler_Setting__mdt>{
-            new Apex_Trigger_Handler_Setting__mdt(
+        TriggersLoader.settings = new List<TriggerHandlerRegistry__mdt>{
+            new TriggerHandlerRegistry__mdt(
                 SObject__c = 'Account',
-                Trigger_Event__c = 'BEFORE_INSERT',
-                Handler_Class__c = 'TriggersLoaderTest.InvalidTriggerHandler',
-                Execution_Order__c = 1,
+                TriggerEvent__c = 'BEFORE_INSERT',
+                HandlerClass__c = 'TriggersLoaderTest.InvalidTriggerHandler',
+                ExecutionOrder__c = 1,
                 Tag__c = null
             )
         };
@@ -147,17 +147,17 @@ public class TriggersLoaderTest {
         triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.BEFORE_UPDATE, oldList, newList);
         triggerManager
             .beforeUpdate()
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .load()
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .afterUpdate()
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .load('tag1')
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .load('tag2')
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .execute();
-        List<Type> handlerTypes = (List<Type>) triggerManager.context.state.get('handlers');
+        List<Type> handlerTypes = ((HandlerState) Triggers.state.get(HandlerState.class)).handlerTypes;
         Assert.areEqual(5, handlerTypes.size());
         Assert.areEqual(MiddleTriggerHandler.class, handlerTypes[0]);
         Assert.areEqual(AccountTriggerHandler1.class, handlerTypes[1]);
@@ -168,17 +168,17 @@ public class TriggersLoaderTest {
         triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.AFTER_UPDATE, oldList, newList);
         triggerManager
             .beforeUpdate()
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .load()
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .afterUpdate()
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .load('tag1')
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .load('tag2')
-            .bind(new MiddleTriggerHandler())
+            .bind(MiddleTriggerHandler.class)
             .execute();
-        handlerTypes = (List<Type>) triggerManager.context.state.get('handlers');
+        handlerTypes = ((HandlerState) Triggers.state.get(HandlerState.class)).handlerTypes;
         Assert.areEqual(6, handlerTypes.size());
         Assert.areEqual(MiddleTriggerHandler.class, handlerTypes[0]);
         Assert.areEqual(AccountTriggerHandler3.class, handlerTypes[1]);
@@ -186,6 +186,14 @@ public class TriggersLoaderTest {
         Assert.areEqual(MiddleTriggerHandler.class, handlerTypes[3]);
         Assert.areEqual(AccountTriggerHandler1.class, handlerTypes[4]);
         Assert.areEqual(MiddleTriggerHandler.class, handlerTypes[5]);
+    }
+
+    public class HandlerState {
+        public List<Type> handlerTypes = new List<Type>();
+
+        public void addHander(Type handlerType) {
+            this.handlerTypes.add(handlerType);
+        }
     }
 
     public class MiddleTriggerHandler implements Triggers.Handler, Triggers.BeforeUpdate, Triggers.AfterUpdate {
@@ -202,10 +210,11 @@ public class TriggersLoaderTest {
         }
 
         private void then(Triggers.Context context) {
-            if (!context.state.containsKey('handlers')) {
-                context.state.put('handlers', new List<Type>());
+            if (!context.state.contains(HandlerState.class)) {
+                context.state.put(HandlerState.class, new HandlerState());
             }
-            ((List<Type>) context.state.get('handlers')).add(MiddleTriggerHandler.class);
+            HandlerState state = (HandlerState) context.state.get(HandlerState.class);
+            state.addHander(MiddleTriggerHandler.class);
         }
     }
 
@@ -223,7 +232,8 @@ public class TriggersLoaderTest {
         }
 
         private void then(Triggers.Context context) {
-            ((List<Type>) context.state.get('handlers')).add(AccountTriggerHandler1.class);
+            HandlerState state = (HandlerState) context.state.get(HandlerState.class);
+            state.addHander(AccountTriggerHandler1.class);
         }
     }
 
@@ -241,7 +251,8 @@ public class TriggersLoaderTest {
         }
 
         private void then(Triggers.Context context) {
-            ((List<Type>) context.state.get('handlers')).add(AccountTriggerHandler2.class);
+            HandlerState state = (HandlerState) context.state.get(HandlerState.class);
+            state.addHander(AccountTriggerHandler2.class);
         }
     }
 
@@ -259,7 +270,8 @@ public class TriggersLoaderTest {
         }
 
         private void then(Triggers.Context context) {
-            ((List<Type>) context.state.get('handlers')).add(AccountTriggerHandler3.class);
+            HandlerState state = (HandlerState) context.state.get(HandlerState.class);
+            state.addHander(AccountTriggerHandler3.class);
         }
     }
 }

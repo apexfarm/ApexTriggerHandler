@@ -80,7 +80,7 @@ This feature is available only when the `ApexTriggerHandlerExt` package is insta
 1. Registering trigger handlers for specific sObject trigger events (`SObject__c`, `TriggerEvent__c`, `HandlerClass__c`).
 2. Defining the execution order of trigger handlers (`ExecutionOrder__c`).
 3. Optionally grouping trigger handlers using tags (`Tag__c`).
-4. Activating or deactivating trigger handlers (`Active__c`).
+4. Activating or deactivating trigger handlers (`IsActive__c`).
 
 | SObject\_\_c | Trigger_Event\_\_c | Handler_Class\_\_c     | Execution_Order\_\_c | Tag\_\_c | Active\_\_c |
 | ------------ | ------------------ | ---------------------- | -------------------- | -------- | ----------- |
@@ -118,7 +118,7 @@ trigger AccountTrigger on Account (before update, after update) {
 
 ### 2.1 Create Handlers
 
-To create a trigger handler, you will need to create a class that implements the `Triggers.Handler` interface and its `criteria` method. Please check the comments below for detailed explanations and tricks to customize a trigger handler.
+To create a trigger handler, you will need to create a class that implements the `Triggers.Handler` interface and its `shouldExecute` method. Please check the comments below for detailed explanations and tricks to customize a trigger handler.
 
 ```java
 // 1. Use interfaces instead of a base class to extend a custom handler. With interface
@@ -128,10 +128,10 @@ public class MyAccountHandler implements Triggers.Handler,
                                          Triggers.BeforeUpdate,
                                          Triggers.AfterUpdate {
 
-    // 2. There is a "criteria" stage before any handler execution. This gives
+    // 2. There is a "shouldExecute" stage before any handler execution. This gives
     // developers opportunities to turn on and off the handlers according to
     // configurations at run time.
-    public Boolean criteria(Triggers.Context context) {
+    public Boolean shouldExecute(Triggers.Context context) {
         return Triggers.WHEN_ALWAYS;
 
         // 3. There are also helper methods to check if certain fields have changes
@@ -249,16 +249,16 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 
 ### 4.1 Trigger Handler Interfaces
 
-| Interface               | Method to Implement                             |
-| ----------------------- | ----------------------------------------------- |
-| Triggers.Handler        | `Boolean criteria(Triggers.Context context);`   |
-| Triggers.BeforeInsert   | `void beforeInsert(Triggers.Context context);`  |
-| Triggers.AfterInsert    | `void afterInsert(Triggers.Context context);`   |
-| Triggers.BeforeUpdate   | `void beforeUpdate(Triggers.Context context);`  |
-| Triggers.AfterUpdate    | `void afterUpdate(Triggers.Context context);`   |
-| Triggers.BeforeDelete   | `void beforeDelete(Triggers.Context context);`  |
-| Triggers.AfterDelete    | `void afterDelete(Triggers.Context context);`   |
-| Triggers.BeforeUndelete | `void afterUndelete(Triggers.Context context);` |
+| Interface               | Method to Implement                                |
+| ----------------------- | -------------------------------------------------- |
+| Triggers.Handler        | `Boolean shouldExecute(Triggers.Context context);` |
+| Triggers.BeforeInsert   | `void beforeInsert(Triggers.Context context);`     |
+| Triggers.AfterInsert    | `void afterInsert(Triggers.Context context);`      |
+| Triggers.BeforeUpdate   | `void beforeUpdate(Triggers.Context context);`     |
+| Triggers.AfterUpdate    | `void afterUpdate(Triggers.Context context);`      |
+| Triggers.BeforeDelete   | `void beforeDelete(Triggers.Context context);`     |
+| Triggers.AfterDelete    | `void afterDelete(Triggers.Context context);`      |
+| Triggers.BeforeUndelete | `void afterUndelete(Triggers.Context context);`    |
 
 ### 4.2 Triggers.Context
 

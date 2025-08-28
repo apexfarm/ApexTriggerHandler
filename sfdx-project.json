@@ -3,20 +3,8 @@
         {
             "path": "apex-trigger-handler",
             "package": "ApexTriggerHandler",
-            "versionName": "ver 1.2.1",
-            "versionNumber": "1.2.1.NEXT"
-        },
-        {
-            "path": "apex-trigger-loader",
-            "package": "ApexTriggerHandlerExt",
-            "versionName": "ver 1.2.1",
-            "versionNumber": "1.2.1.NEXT",
-            "default": true,
-            "dependencies": [
-                {
-                    "package": "ApexTriggerHandler@1.2.1-1"
-                }
-            ]
+            "versionName": "ver 2.0.0",
+            "versionNumber": "2.0.0.NEXT"
         }
     ],
     "name": "ApexTriggerHandler",

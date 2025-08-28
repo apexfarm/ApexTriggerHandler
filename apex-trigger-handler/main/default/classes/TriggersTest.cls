@@ -91,18 +91,6 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     }
 
     @IsTest
-    static void testBinding_NullLoader() {
-        Triggers.Loader loader = Triggers.LOADER;
-
-        Triggers.LOADER = new Triggers.NullLoader();
-        Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null)
-            .beforeInsert()
-                .load()
-                .load('tag1')
-            .execute();
-    }
-
-    @IsTest
     static void testBinding_Stop_BeforeInsert() {
         Triggers.ManagerImpl triggerManager = (Triggers.ManagerImpl) Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null);
         triggerManager.beforeInsert()
@@ -640,7 +628,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     // #region Handler Impls
     // TriggersTest is treated as a handler to be skipped, because inner class cannot be reflected
     // from an instance back to type properly.
-    public Boolean criteria(Triggers.Context context) {
+    public Boolean shouldExecute(Triggers.Context context) {
         return Triggers.WHEN_ALWAYS;
     }
 
@@ -658,7 +646,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     public class FirstHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             context.next(); // negative case, shouldn't do this
             return Triggers.WHEN_ALWAYS;
         }
@@ -708,7 +696,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     public class MainHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
@@ -750,7 +738,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     }
 
     public class StopHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
@@ -769,7 +757,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     }
 
     public class InactiveHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             context.next(); // negative test, shouldn't work in when method
             context.next();
             context.next();
@@ -789,7 +777,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     }
 
     public class AddSkippedHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             return Triggers.WHEN_ALWAYS;
         }
 
@@ -804,7 +792,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     }
 
     public class RemoveSkippedHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             return Triggers.WHEN_ALWAYS;
         }
 
@@ -821,7 +809,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     }
 
     public class ClearSkippedHandler implements Triggers.Handler, Triggers.BeforeInsert {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             return Triggers.WHEN_ALWAYS;
         }
 
@@ -838,7 +826,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     public class LastHandler implements Triggers.Handler, Triggers.BeforeInsert, Triggers.AfterInsert,
         Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete,
         Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             context.next(); // shouldn't work in when method
             return Triggers.WHEN_ALWAYS;
         }
@@ -882,7 +870,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
     public class AccountNameChangedHandler implements Triggers.Handler, Triggers.BeforeInsert,
         Triggers.AfterInsert, Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete,
         Triggers.AfterDelete, Triggers.AfterUndelete {
-        public Boolean criteria(Triggers.Context context) {
+        public Boolean shouldExecute(Triggers.Context context) {
             return Triggers.WHEN_ALWAYS;
         }
 

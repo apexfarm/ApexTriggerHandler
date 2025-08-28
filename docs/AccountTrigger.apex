@@ -1,6 +1,18 @@
 trigger AccountTrigger on Account (before update, after update) {
+    Triggers.prepare().execute();
 
     Triggers.prepare()
+        .bind('MyAccountHandler')
+        .bind('AnotherAccountHandler')
+        .bind('MyAccountHandler')
+        .bind('AnotherAccountHandler')
+        .execute();
+
+    Triggers.prepare()
+        .bind('MyAccountHandler')
+        .bind('AnotherAccountHandler')
+        .bind('MyAccountHandler')
+        .bind('AnotherAccountHandler')
         .beforeUpdate()
             .bind('MyAccountHandler')
             .bind('AnotherAccountHandler')
@@ -10,9 +22,9 @@ trigger AccountTrigger on Account (before update, after update) {
         .execute();
 }
 
-// 1. a global flag to turn handlers off
-// 2. better state management (DONE): strong typed, global control
-// 3. bind instances of handlers, or strings? (performance is better?)
+// 1. (DONE) a global flag to turn handlers off
+// 2. (DONE) better state management: strong typed, global control
+// 3. (DONE) bind instances of handlers, or strings? (performance is better?)
 // 4. enhance for domain logic, such as validation, calculation, transformation
 // 5. should be simple to use, rare case should not be considered
 

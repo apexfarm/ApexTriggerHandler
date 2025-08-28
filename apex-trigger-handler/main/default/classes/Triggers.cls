@@ -34,17 +34,29 @@ public class Triggers {
     public static final Boolean WHEN_ALWAYS = true;
     public static final SkipsImpl skips = new SkipsImpl();
     public static final StateImpl state = new StateImpl();
+    @TestVisible
+    public static TriggerHandlerSettings__c HANDLER_SETTINGS {
+        get {
+            if (HANDLER_SETTINGS == null) {
+                HANDLER_SETTINGS = TriggerHandlerSettings__c.getInstance();
+            }
+
+            if (HANDLER_SETTINGS.Name == null) {
+                HANDLER_SETTINGS = new TriggerHandlerSettings__c();
+                HANDLER_SETTINGS.Name = 'Default';
+                HANDLER_SETTINGS.BypassTriggers__c = false;
+                HANDLER_SETTINGS.BypassRegistry__c = false;
+            }
+            return HANDLER_SETTINGS;
+        }
+        private set;
+    }
 
     @TestVisible
     private static Loader LOADER {
         get {
             if (LOADER == null) {
-                Type LoaderType = Type.forName('TriggersLoader');
-                if (LoaderType == null) {
-                    LOADER = new NullLoader();
-                } else {
-                    LOADER = (Loader) LoaderType.newInstance();
-                }
+                LOADER = new TriggersLoader();
             }
             return LOADER;
         }
@@ -67,7 +79,7 @@ public class Triggers {
         public final Props props { get; private set; }
         public final Context context { get; private set; }
 
-        Boolean canBind = false;
+        Boolean canBind = true;
 
         private ManagerImpl(Props props) {
             this.props = props;
@@ -75,38 +87,57 @@ public class Triggers {
         }
 
         public Manager beforeInsert() {
-            canBind = this.props.operationType == TriggerOperation.BEFORE_INSERT;
+            this.canBind = this.props.operationType == TriggerOperation.BEFORE_INSERT;
             return this;
         }
 
         public Manager afterInsert() {
-            canBind = this.props.operationType == TriggerOperation.AFTER_INSERT;
+            this.canBind = this.props.operationType == TriggerOperation.AFTER_INSERT;
             return this;
         }
 
         public Manager beforeUpdate() {
-            canBind = this.props.operationType == TriggerOperation.BEFORE_UPDATE;
+            this.canBind = this.props.operationType == TriggerOperation.BEFORE_UPDATE;
             return this;
         }
 
         public Manager afterUpdate() {
-            canBind = this.props.operationType == TriggerOperation.AFTER_UPDATE;
+            this.canBind = this.props.operationType == TriggerOperation.AFTER_UPDATE;
             return this;
         }
 
         public Manager beforeDelete() {
-            canBind = this.props.operationType == TriggerOperation.BEFORE_DELETE;
+            this.canBind = this.props.operationType == TriggerOperation.BEFORE_DELETE;
             return this;
         }
 
         public Manager afterDelete() {
-            canBind = this.props.operationType == TriggerOperation.AFTER_DELETE;
+            this.canBind = this.props.operationType == TriggerOperation.AFTER_DELETE;
             return this;
         }
 
         public Manager afterUndelete() {
-            canBind = this.props.operationType == TriggerOperation.AFTER_UNDELETE;
+            this.canBind = this.props.operationType == TriggerOperation.AFTER_UNDELETE;
             return this;
+        }
+
+        private void loadRegistry() {
+            if (HANDLER_SETTINGS.BypassRegistry__c == true) {
+                return;
+            }
+
+            this.canBind = true;
+
+            List<Type> handlerTypes = LOADER.load(
+                String.valueOf(this.props.sObjectType),
+                this.props.operationType.name()
+            );
+
+            for (Type handlerType : handlerTypes) {
+                this.bind(handlerType);
+            }
+
+            this.canBind = false;
         }
 
         public Manager bind(Type handlerType) {
@@ -114,7 +145,7 @@ public class Triggers {
                 return this;
             }
 
-            if (!canBind) {
+            if (!this.canBind) {
                 return this;
             }
 
@@ -165,7 +196,7 @@ public class Triggers {
                 return this;
             }
 
-            if (!canBind) {
+            if (!this.canBind) {
                 return this;
             }
 
@@ -177,27 +208,10 @@ public class Triggers {
             return this;
         }
 
-        public Manager load() {
-            if (canBind) {
-                // List<Handler> handlers = LOADER.load(this.props.sObjectType, this.props.operationType);
-                // for (Handler handler : handlers) {
-                //     this.bind(handler);
-                // }
-            }
-            return this;
-        }
-
-        public Manager load(String tag) {
-            if (canBind) {
-                // List<Handler> handlers = LOADER.load(this.props.sObjectType, this.props.operationType, tag);
-                // for (Handler handler : handlers) {
-                //     this.bind(handler);
-                // }
-            }
-            return this;
-        }
-
         public void execute() {
+            if (HANDLER_SETTINGS.BypassTriggers__c == true) {
+                return;
+            }
             this.context.execute();
             this.props.isExecuting = false;
         }
@@ -279,7 +293,7 @@ public class Triggers {
 
         private final List<Type> handlerTypes = new List<Type>();
         private Integer currIndex = -1;
-        private Boolean isExecutingCriteria = false;
+        private Boolean isExecutingshouldExecute = false;
 
         private Context(Props props) {
             this.skips = Triggers.skips;
@@ -292,8 +306,8 @@ public class Triggers {
         }
 
         public void next() {
-            // prevent calling context.next() in criteria phase
-            if (!this.isExecutingCriteria) {
+            // prevent calling context.next() in shouldExecute phase
+            if (!this.isExecutingshouldExecute) {
                 while (hasNext()) {
                     runNext();
                 }
@@ -320,9 +334,9 @@ public class Triggers {
             Type handlerType = this.handlerTypes[this.currIndex];
             Handler handler = (Handler) handlerType.newInstance();
 
-            this.isExecutingCriteria = true;
-            if (!this.skips.contains(handler) && handler.criteria(this) == true) {
-                this.isExecutingCriteria = false;
+            this.isExecutingshouldExecute = true;
+            if (!this.skips.contains(handler) && handler.shouldExecute(this) == true) {
+                this.isExecutingshouldExecute = false;
                 switch on this.props.operationType {
                     when BEFORE_INSERT {
                         ((BeforeInsert) handler).beforeInsert(this);
@@ -349,7 +363,7 @@ public class Triggers {
                     }
                 }
             } else {
-                this.isExecutingCriteria = false;
+                this.isExecutingshouldExecute = false;
             }
         }
     }
@@ -657,19 +671,7 @@ public class Triggers {
     //===================
     // #region interfaces
     public interface Loader {
-        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent);
-        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag);
-    }
-
-    @TestVisible
-    private class NullLoader implements Loader {
-        public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent) {
-            return new List<Handler>();
-        }
-
-        public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag) {
-            return new List<Handler>();
-        }
+        List<Type> load(String sobjectName, String triggerEventName);
     }
 
     public interface IContext {
@@ -730,14 +732,11 @@ public class Triggers {
         Manager bind(String handlerName);
         Manager bind(List<String> handlerNames);
 
-        Manager load();
-        Manager load(String tag);
-
         void execute();
     }
 
     public interface Handler {
-        Boolean criteria(Context context);
+        Boolean shouldExecute(Context context);
     }
 
     public interface BeforeInsert extends Handler {

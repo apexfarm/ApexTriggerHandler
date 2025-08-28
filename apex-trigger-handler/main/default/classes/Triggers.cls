@@ -121,12 +121,14 @@ public class Triggers {
             return this;
         }
 
-        private void loadRegistry() {
+        public Manager load() {
             if (HANDLER_SETTINGS.BypassRegistry__c == true) {
-                return;
+                return this;
             }
 
-            this.canBind = true;
+            if (!canBind) {
+                return this;
+            }
 
             List<Type> handlerTypes = LOADER.load(
                 String.valueOf(this.props.sObjectType),
@@ -137,7 +139,7 @@ public class Triggers {
                 this.bind(handlerType);
             }
 
-            this.canBind = false;
+            return this;
         }
 
         public Manager bind(Type handlerType) {
@@ -145,7 +147,7 @@ public class Triggers {
                 return this;
             }
 
-            if (!this.canBind) {
+            if (!canBind) {
                 return this;
             }
 
@@ -196,7 +198,7 @@ public class Triggers {
                 return this;
             }
 
-            if (!this.canBind) {
+            if (!canBind) {
                 return this;
             }
 
@@ -233,19 +235,8 @@ public class Triggers {
             return this.skippedHandlers.contains(handlerType);
         }
 
-        @TestVisible
-        private Boolean contains(Handler handler) {
-            return contains(getHandlerType(handler));
-        }
-
         public void clear() {
             this.skippedHandlers.clear();
-        }
-
-        private Type getHandlerType(Handler handler) {
-            String printName = String.valueOf(handler);
-            String typeName = printName.substring(0, printName.indexOf(':'));
-            return Type.forName(typeName);
         }
     }
 
@@ -293,7 +284,7 @@ public class Triggers {
 
         private final List<Type> handlerTypes = new List<Type>();
         private Integer currIndex = -1;
-        private Boolean isExecutingshouldExecute = false;
+        private Boolean isExecutingShouldExecute = false;
 
         private Context(Props props) {
             this.skips = Triggers.skips;
@@ -307,7 +298,7 @@ public class Triggers {
 
         public void next() {
             // prevent calling context.next() in shouldExecute phase
-            if (!this.isExecutingshouldExecute) {
+            if (!this.isExecutingShouldExecute) {
                 while (hasNext()) {
                     runNext();
                 }
@@ -332,11 +323,16 @@ public class Triggers {
         private void runNext() {
             this.currIndex++;
             Type handlerType = this.handlerTypes[this.currIndex];
+
+            if (this.skips.contains(handlerType)) {
+                return;
+            }
+
             Handler handler = (Handler) handlerType.newInstance();
 
-            this.isExecutingshouldExecute = true;
-            if (!this.skips.contains(handler) && handler.shouldExecute(this) == true) {
-                this.isExecutingshouldExecute = false;
+            this.isExecutingShouldExecute = true;
+            if (handler.shouldExecute(this) == true) {
+                this.isExecutingShouldExecute = false;
                 switch on this.props.operationType {
                     when BEFORE_INSERT {
                         ((BeforeInsert) handler).beforeInsert(this);
@@ -363,7 +359,7 @@ public class Triggers {
                     }
                 }
             } else {
-                this.isExecutingshouldExecute = false;
+                this.isExecutingShouldExecute = false;
             }
         }
     }
@@ -727,6 +723,7 @@ public class Triggers {
         Manager afterDelete();
         Manager afterUndelete();
 
+        Manager load();
         Manager bind(Type handlerType);
         Manager bind(List<Type> handlerTypes);
         Manager bind(String handlerName);

@@ -30,3 +30,6 @@ trigger AccountTrigger on Account (before update, after update) {
 
 AccountTriggerState state = (AccountTriggerState) context.state.get(AccountTriggerState.class);
 state.counter++;
+
+
+State.fetchParent(Account, 'Name', 'BillingAddress').parent(AccountGroup).child(PriceBook2)

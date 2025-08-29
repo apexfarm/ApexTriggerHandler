@@ -36,43 +36,54 @@ public class Triggers {
 
     // ===============
     // #region Settings
-    public static final Settings handlerSettings = new Settings();
+    public static final Settings settings = new Settings();
+
+    public static void bypassTriggers(Boolean bypass) {
+        settings.record.BypassTriggers__c = bypass;
+    }
+    public static void bypassRegistry(Boolean bypass) {
+        settings.record.BypassRegistry__c = bypass;
+    }
+    public static void bypassSObjects(String bypass) {
+        settings.record.BypassSObjects__c = bypass;
+        settings.bypassSObjects = null;
+    }
 
     public class Settings {
-        private TriggerHandlerSettings__c managerSettings {
+        private TriggerHandlerSettings__c record {
             get {
-                if (managerSettings == null) {
-                    managerSettings = TriggerHandlerSettings__c.getInstance();
+                if (record == null) {
+                    record = TriggerHandlerSettings__c.getInstance();
                 }
 
-                if (managerSettings.Name == null) {
-                    managerSettings = new TriggerHandlerSettings__c();
-                    managerSettings.Name = 'Default';
-                    managerSettings.ApexHasPriority__c = false;
-                    managerSettings.BypassRegistry__c = false;
-                    managerSettings.BypassTriggers__c = false;
-                    managerSettings.BypassSObjects__c = null;
+                if (record.Name == null) {
+                    record = new TriggerHandlerSettings__c();
+                    record.Name = 'Default';
+                    record.ApexHasPriority__c = false;
+                    record.BypassRegistry__c = false;
+                    record.BypassTriggers__c = false;
+                    record.BypassSObjects__c = null;
                 }
-                return managerSettings;
+                return record;
             }
             set;
         }
 
         public Boolean apexHasPriority {
             get {
-                return managerSettings.ApexHasPriority__c == true;
+                return record.ApexHasPriority__c == true;
             }
         }
 
         public Boolean bypassRegistry {
             get {
-                return managerSettings.BypassRegistry__c == true;
+                return record.BypassRegistry__c == true;
             }
         }
 
         public Boolean bypassTriggers {
             get {
-                return managerSettings.BypassTriggers__c == true;
+                return record.BypassTriggers__c == true;
             }
         }
 
@@ -80,8 +91,8 @@ public class Triggers {
             get {
                 if (bypassSObjects == null) {
                     bypassSObjects = new Set<String>();
-                    if (!String.isBlank(managerSettings.BypassSObjects__c)) {
-                        for (String sobjectName : managerSettings.BypassSObjects__c.split('\n')) {
+                    if (!String.isBlank(record.BypassSObjects__c)) {
+                        for (String sobjectName : record.BypassSObjects__c.split('\n')) {
                             if (!String.isBlank(sobjectName)) {
                                 bypassSObjects.add(sobjectName.trim().toUpperCase());
                             }
@@ -120,21 +131,21 @@ public class Triggers {
     }
 
     public class TriggersLoader implements Loader {
-        private final Map<String, Map<String, List<TriggerHandlerRegistry__mdt>>> handlerSettings { get; set; }
-        private final Map<String, Type> handlerTypes { get; set; }
+        private final Map<String, Map<String, List<TriggerHandlerRegistry__mdt>>> handlerRegistry { get; set; }
+        private final Map<String, Type> handlerTypeDict { get; set; }
 
         private TriggersLoader() {
-            handlerSettings = new Map<String, Map<String, List<TriggerHandlerRegistry__mdt>>>();
-            handlerTypes = new Map<String, Type>();
+            handlerRegistry = new Map<String, Map<String, List<TriggerHandlerRegistry__mdt>>>();
+            handlerTypeDict = new Map<String, Type>();
         }
 
         public List<Type> load(String sobjectName, String triggerEventName) {
             List<Type> handlerTypes = new List<Type>();
             if (
-                handlerSettings.containsKey(sobjectName) &&
-                handlerSettings.get(sobjectName).containsKey(triggerEventName)
+                handlerRegistry.containsKey(sobjectName) &&
+                handlerRegistry.get(sobjectName).containsKey(triggerEventName)
             ) {
-                for (TriggerHandlerRegistry__mdt setting : handlerSettings.get(sobjectName).get(triggerEventName)) {
+                for (TriggerHandlerRegistry__mdt setting : handlerRegistry.get(sobjectName).get(triggerEventName)) {
                     handlerTypes.add(getHandlerType(setting.HandlerClass__c));
                 }
             }
@@ -142,42 +153,42 @@ public class Triggers {
         }
 
         private void loadHandlerSettings(String sobjectName) {
-            if (!handlerSettings.containsKey(sobjectName)) {
-                List<TriggerHandlerRegistry__mdt> settings = [
+            if (!handlerRegistry.containsKey(sobjectName)) {
+                List<TriggerHandlerRegistry__mdt> registredHandlers = [
                     SELECT Id, Label, SObject__c, TriggerEvent__c, HandlerClass__c, ExecutionOrder__c
                     FROM TriggerHandlerRegistry__mdt
                     WHERE IsActive__c = TRUE AND SObject__c = :sobjectName
                     ORDER BY SObject__c, TriggerEvent__c, ExecutionOrder__c
                 ];
 
-                setSettings(sobjectName, settings);
+                setSettings(sobjectName, registredHandlers);
             }
         }
 
-        public void setSettings(String sobjectName, List<TriggerHandlerRegistry__mdt> settings) {
-            handlerSettings.put(sobjectName, new Map<String, List<TriggerHandlerRegistry__mdt>>());
+        public void setSettings(String sobjectName, List<TriggerHandlerRegistry__mdt> registredHandlers) {
+            handlerRegistry.put(sobjectName, new Map<String, List<TriggerHandlerRegistry__mdt>>());
 
             String preTriggerEvent = null;
-            for (TriggerHandlerRegistry__mdt setting : settings) {
-                String triggerEvent = setting.TriggerEvent__c;
+            for (TriggerHandlerRegistry__mdt registeredHandler : registredHandlers) {
+                String triggerEvent = registeredHandler.TriggerEvent__c;
                 if (preTriggerEvent != triggerEvent) {
                     preTriggerEvent = triggerEvent;
-                    handlerSettings.get(sobjectName).put(triggerEvent, new List<TriggerHandlerRegistry__mdt>());
+                    handlerRegistry.get(sobjectName).put(triggerEvent, new List<TriggerHandlerRegistry__mdt>());
                 }
 
-                handlerSettings.get(sobjectName).get(triggerEvent).add(setting);
+                handlerRegistry.get(sobjectName).get(triggerEvent).add(registeredHandler);
             }
         }
 
         private Type getHandlerType(String className) {
-            if (!handlerTypes.containsKey(className)) {
+            if (!handlerTypeDict.containsKey(className)) {
                 Type handlerType = Type.forName(className);
                 if (handlerType == null) {
                     throw new TypeException('Handler class [' + className + '] cannot be found.');
                 }
-                handlerTypes.put(className, handlerType);
+                handlerTypeDict.put(className, handlerType);
             }
-            return handlerTypes.get(className);
+            return handlerTypeDict.get(className);
         }
     }
 
@@ -189,7 +200,7 @@ public class Triggers {
 
     public static Manager prepare() {
         Props props = new Props();
-        if (handlerSettings.BypassTriggers == true || handlerSettings.bypassSObject(props.sObjectType)) {
+        if (settings.BypassTriggers == true || settings.bypassSObject(props.sObjectType)) {
             return new NullManager(props);
         }
 
@@ -199,7 +210,7 @@ public class Triggers {
     @TestVisible
     private static Manager prepare(TriggerOperation operationType, List<SObject> oldList, List<SObject> newList) {
         Props props = new Props(operationType, oldList, newList);
-        if (handlerSettings.BypassTriggers == true || handlerSettings.bypassSObject(props.sObjectType)) {
+        if (settings.BypassTriggers == true || settings.bypassSObject(props.sObjectType)) {
             return new NullManager(props);
         }
 
@@ -216,7 +227,7 @@ public class Triggers {
         private ManagerImpl(Props props) {
             this.props = props;
             this.context = new Context(this.props);
-            if (!handlerSettings.apexHasPriority) {
+            if (!settings.apexHasPriority) {
                 this.load();
             }
         }
@@ -257,7 +268,7 @@ public class Triggers {
         }
 
         private Manager load() {
-            if (handlerSettings.BypassRegistry == true) {
+            if (settings.BypassRegistry == true) {
                 return this;
             }
 
@@ -346,7 +357,7 @@ public class Triggers {
         }
 
         public void execute() {
-            if (handlerSettings.apexHasPriority) {
+            if (settings.apexHasPriority) {
                 this.canBind = true;
                 this.load();
                 this.canBind = false;
@@ -829,7 +840,7 @@ public class Triggers {
     }
 
     public class StatesImpl implements States {
-        private final Map<Type, Object> states = new Map<Type, Object>();
+        private final Map<Type, State> states = new Map<Type, State>();
 
         public Boolean contains(Type stateType) {
             return this.states.containsKey(stateType);
@@ -843,9 +854,13 @@ public class Triggers {
             this.states.clear();
         }
 
-        public void put(Type stateType, Object state) {
+        public void put(Type stateType, State state) {
             if (stateType == null || state == null) {
                 return;
+            }
+
+            if (!State.class.isAssignableFrom(stateType)) {
+                throw new IllegalArgumentException('Type [' + stateType + '] is not a State type.');
             }
 
             this.states.put(stateType, state);
@@ -856,8 +871,12 @@ public class Triggers {
                 return null;
             }
 
+            if (!State.class.isAssignableFrom(stateType)) {
+                throw new IllegalArgumentException('Type [' + stateType + '] is not a State type.');
+            }
+
             if (!this.states.containsKey(stateType)) {
-                States state = (States) stateType.newInstance();
+                State state = (State) stateType.newInstance();
                 this.states.put(stateType, state);
             }
             return this.states.get(stateType);
@@ -905,14 +924,13 @@ public class Triggers {
 
     public interface States {
         Object get(Type stateType);
-        void put(Type stateType, Object state);
+        void put(Type stateType, State state);
         Boolean contains(Type stateType);
         void remove(Type stateType);
         void clear();
     }
 
     public interface State {
-        void fetchRelated(Props props);
     }
 
     public interface Skips {

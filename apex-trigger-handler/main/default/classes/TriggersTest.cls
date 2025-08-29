@@ -227,7 +227,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         Assert.areEqual(MiddleTriggerHandler.class, handlerTypes[5]);
     }
 
-    public class HandlerState {
+    public class HandlerState implements Triggers.State {
         public List<Type> handlerTypes = new List<Type>();
 
         public void addHander(Type handlerType) {
@@ -891,7 +891,7 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         ++state.counter;
     }
 
-    public class CounterState {
+    public class CounterState implements Triggers.State {
         public Integer counter = -2;
     }
 

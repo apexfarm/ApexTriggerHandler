@@ -1,10 +1,9 @@
 trigger AccountTrigger on Account (before update, after update) {
-    Triggers.prepare().load().execute();
+    Triggers.prepare().execute();
 
     Triggers.prepare()
         .bind('MyAccountHandler')
         .bind('AnotherAccountHandler')
-        .load()
         .bind('MyAccountHandler')
         .bind('AnotherAccountHandler')
         .execute();
@@ -16,11 +15,9 @@ trigger AccountTrigger on Account (before update, after update) {
         .bind('AnotherAccountHandler')
         .beforeUpdate()
             .bind('MyAccountHandler')
-            .load()
             .bind('AnotherAccountHandler')
         .afterUpdate()
             .bind('MyAccountHandler')
-            .load()
             .bind('AnotherAccountHandler')
         .execute();
 }

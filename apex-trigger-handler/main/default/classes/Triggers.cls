@@ -31,26 +31,82 @@
  */
 
 public class Triggers {
-    public static final Boolean WHEN_ALWAYS = true;
     public static final SkipsImpl skips = new SkipsImpl();
-    public static final StateImpl state = new StateImpl();
-    @TestVisible
-    public static TriggerHandlerSettings__c HANDLER_SETTINGS {
-        get {
-            if (HANDLER_SETTINGS == null) {
-                HANDLER_SETTINGS = TriggerHandlerSettings__c.getInstance();
-            }
+    public static final StatesImpl states = new StatesImpl();
 
-            if (HANDLER_SETTINGS.Name == null) {
-                HANDLER_SETTINGS = new TriggerHandlerSettings__c();
-                HANDLER_SETTINGS.Name = 'Default';
-                HANDLER_SETTINGS.BypassTriggers__c = false;
-                HANDLER_SETTINGS.BypassRegistry__c = false;
+    // ===============
+    // #region Settings
+    public static final Settings handlerSettings = new Settings();
+
+    public class Settings {
+        private TriggerHandlerSettings__c managerSettings {
+            get {
+                if (managerSettings == null) {
+                    managerSettings = TriggerHandlerSettings__c.getInstance();
+                }
+
+                if (managerSettings.Name == null) {
+                    managerSettings = new TriggerHandlerSettings__c();
+                    managerSettings.Name = 'Default';
+                    managerSettings.ApexHasPriority__c = false;
+                    managerSettings.BypassRegistry__c = false;
+                    managerSettings.BypassTriggers__c = false;
+                    managerSettings.BypassSObjects__c = null;
+                }
+                return managerSettings;
             }
-            return HANDLER_SETTINGS;
+            set;
         }
-        private set;
+
+        public Boolean apexHasPriority {
+            get {
+                return managerSettings.ApexHasPriority__c == true;
+            }
+        }
+
+        public Boolean bypassRegistry {
+            get {
+                return managerSettings.BypassRegistry__c == true;
+            }
+        }
+
+        public Boolean bypassTriggers {
+            get {
+                return managerSettings.BypassTriggers__c == true;
+            }
+        }
+
+        private Set<String> bypassSObjects {
+            get {
+                if (bypassSObjects == null) {
+                    bypassSObjects = new Set<String>();
+                    if (!String.isBlank(managerSettings.BypassSObjects__c)) {
+                        for (String sobjectName : managerSettings.BypassSObjects__c.split('\n')) {
+                            if (!String.isBlank(sobjectName)) {
+                                bypassSObjects.add(sobjectName.trim().toUpperCase());
+                            }
+                        }
+                    }
+                }
+                return bypassSObjects;
+            }
+            set;
+        }
+
+        public Boolean bypassSObject(SObjectType sobjectType) {
+            if (sobjectType == null) {
+                return false;
+            }
+            String sObjectName = String.valueOf(sobjectType);
+            return this.bypassSObjects.contains(sobjectName.toUpperCase());
+        }
     }
+
+    // #endregion
+    // ===============
+
+    // ==============
+    // #region Loader
 
     @TestVisible
     private static Loader LOADER {
@@ -63,14 +119,90 @@ public class Triggers {
         set;
     }
 
+    public class TriggersLoader implements Loader {
+        private final Map<String, Map<String, List<TriggerHandlerRegistry__mdt>>> handlerSettings { get; set; }
+        private final Map<String, Type> handlerTypes { get; set; }
+
+        private TriggersLoader() {
+            handlerSettings = new Map<String, Map<String, List<TriggerHandlerRegistry__mdt>>>();
+            handlerTypes = new Map<String, Type>();
+        }
+
+        public List<Type> load(String sobjectName, String triggerEventName) {
+            List<Type> handlerTypes = new List<Type>();
+            if (
+                handlerSettings.containsKey(sobjectName) &&
+                handlerSettings.get(sobjectName).containsKey(triggerEventName)
+            ) {
+                for (TriggerHandlerRegistry__mdt setting : handlerSettings.get(sobjectName).get(triggerEventName)) {
+                    handlerTypes.add(getHandlerType(setting.HandlerClass__c));
+                }
+            }
+            return handlerTypes;
+        }
+
+        private void loadHandlerSettings(String sobjectName) {
+            if (!handlerSettings.containsKey(sobjectName)) {
+                List<TriggerHandlerRegistry__mdt> settings = [
+                    SELECT Id, Label, SObject__c, TriggerEvent__c, HandlerClass__c, ExecutionOrder__c
+                    FROM TriggerHandlerRegistry__mdt
+                    WHERE IsActive__c = TRUE AND SObject__c = :sobjectName
+                    ORDER BY SObject__c, TriggerEvent__c, ExecutionOrder__c
+                ];
+
+                setSettings(sobjectName, settings);
+            }
+        }
+
+        public void setSettings(String sobjectName, List<TriggerHandlerRegistry__mdt> settings) {
+            handlerSettings.put(sobjectName, new Map<String, List<TriggerHandlerRegistry__mdt>>());
+
+            String preTriggerEvent = null;
+            for (TriggerHandlerRegistry__mdt setting : settings) {
+                String triggerEvent = setting.TriggerEvent__c;
+                if (preTriggerEvent != triggerEvent) {
+                    preTriggerEvent = triggerEvent;
+                    handlerSettings.get(sobjectName).put(triggerEvent, new List<TriggerHandlerRegistry__mdt>());
+                }
+
+                handlerSettings.get(sobjectName).get(triggerEvent).add(setting);
+            }
+        }
+
+        private Type getHandlerType(String className) {
+            if (!handlerTypes.containsKey(className)) {
+                Type handlerType = Type.forName(className);
+                if (handlerType == null) {
+                    throw new TypeException('Handler class [' + className + '] cannot be found.');
+                }
+                handlerTypes.put(className, handlerType);
+            }
+            return handlerTypes.get(className);
+        }
+    }
+
+    // #endregion
+    // ==============
+
+    // ===============
+    // #region Manager
+
     public static Manager prepare() {
         Props props = new Props();
+        if (handlerSettings.BypassTriggers == true || handlerSettings.bypassSObject(props.sObjectType)) {
+            return new NullManager(props);
+        }
+
         return new ManagerImpl(props);
     }
 
     @TestVisible
     private static Manager prepare(TriggerOperation operationType, List<SObject> oldList, List<SObject> newList) {
         Props props = new Props(operationType, oldList, newList);
+        if (handlerSettings.BypassTriggers == true || handlerSettings.bypassSObject(props.sObjectType)) {
+            return new NullManager(props);
+        }
+
         return new ManagerImpl(props);
     }
 
@@ -84,6 +216,9 @@ public class Triggers {
         private ManagerImpl(Props props) {
             this.props = props;
             this.context = new Context(this.props);
+            if (!handlerSettings.apexHasPriority) {
+                this.load();
+            }
         }
 
         public Manager beforeInsert() {
@@ -121,8 +256,8 @@ public class Triggers {
             return this;
         }
 
-        public Manager load() {
-            if (HANDLER_SETTINGS.BypassRegistry__c == true) {
+        private Manager load() {
+            if (handlerSettings.BypassRegistry == true) {
                 return this;
             }
 
@@ -211,76 +346,78 @@ public class Triggers {
         }
 
         public void execute() {
-            if (HANDLER_SETTINGS.BypassTriggers__c == true) {
-                return;
+            if (handlerSettings.apexHasPriority) {
+                this.canBind = true;
+                this.load();
+                this.canBind = false;
             }
+
             this.context.execute();
             this.props.isExecuting = false;
         }
     }
 
-    public class SkipsImpl implements Skips {
-        @TestVisible
-        private final Set<Type> skippedHandlers = new Set<Type>();
-
-        public void add(type handlerType) {
-            this.skippedHandlers.add(handlerType);
+    private class NullManager implements Manager {
+        private NullManager(Props props) {
         }
 
-        public void remove(type handlerType) {
-            this.skippedHandlers.remove(handlerType);
+        public Manager beforeInsert() {
+            return this;
         }
 
-        public Boolean contains(type handlerType) {
-            return this.skippedHandlers.contains(handlerType);
+        public Manager afterInsert() {
+            return this;
         }
 
-        public void clear() {
-            this.skippedHandlers.clear();
-        }
-    }
-
-    public class StateImpl implements State {
-        private final Map<Type, Object> states = new Map<Type, Object>();
-
-        public Boolean contains(Type stateType) {
-            return this.states.containsKey(stateType);
+        public Manager beforeUpdate() {
+            return this;
         }
 
-        public void remove(Type stateType) {
-            this.states.remove(stateType);
+        public Manager afterUpdate() {
+            return this;
         }
 
-        public void clear() {
-            this.states.clear();
+        public Manager beforeDelete() {
+            return this;
         }
 
-        public void put(Type stateType, Object state) {
-            if (stateType == null || state == null) {
-                return;
-            }
-
-            this.states.put(stateType, state);
+        public Manager afterDelete() {
+            return this;
         }
 
-        public Object get(Type stateType) {
-            if (stateType == null) {
-                return null;
-            }
+        public Manager afterUndelete() {
+            return this;
+        }
 
-            if (!this.states.containsKey(stateType)) {
-                State state = (State) stateType.newInstance();
-                this.states.put(stateType, state);
-            }
-            return this.states.get(stateType);
+        public Manager bind(Type handlerType) {
+            return this;
+        }
+
+        public Manager bind(List<Type> handlerTypes) {
+            return this;
+        }
+
+        public Manager bind(String handlerName) {
+            return this;
+        }
+
+        public Manager bind(List<String> handlerNames) {
+            return this;
+        }
+
+        public void execute() {
         }
     }
 
+    // #endregion
+    // ===============
+
+    // ===============
     // #region Context
     public class Context implements IContext {
         public final SkipsImpl skips { get; private set; }
         public final Props props { get; private set; }
-        public final State state { get; private set; }
+        public final States states { get; private set; }
 
         private final List<Type> handlerTypes = new List<Type>();
         private Integer currIndex = -1;
@@ -288,7 +425,7 @@ public class Triggers {
 
         private Context(Props props) {
             this.skips = Triggers.skips;
-            this.state = Triggers.state;
+            this.states = Triggers.states;
             this.props = props;
         }
 
@@ -297,7 +434,7 @@ public class Triggers {
         }
 
         public void next() {
-            // prevent calling context.next() in shouldExecute phase
+            // Prevent calling context.next() during the shouldExecute phase
             if (!this.isExecutingShouldExecute) {
                 while (hasNext()) {
                     runNext();
@@ -662,12 +799,79 @@ public class Triggers {
         }
     }
 
+    public class SkipsImpl implements Skips {
+        @TestVisible
+        private final Set<Type> skippedHandlers = new Set<Type>();
+
+        public void add(type handlerType) {
+            if (handlerType == null) {
+                return;
+            }
+
+            if (!Handler.class.isAssignableFrom(handlerType)) {
+                throw new IllegalArgumentException('Type [' + handlerType + '] is not a Handler type.');
+            }
+
+            this.skippedHandlers.add(handlerType);
+        }
+
+        public void remove(type handlerType) {
+            this.skippedHandlers.remove(handlerType);
+        }
+
+        public Boolean contains(type handlerType) {
+            return this.skippedHandlers.contains(handlerType);
+        }
+
+        public void clear() {
+            this.skippedHandlers.clear();
+        }
+    }
+
+    public class StatesImpl implements States {
+        private final Map<Type, Object> states = new Map<Type, Object>();
+
+        public Boolean contains(Type stateType) {
+            return this.states.containsKey(stateType);
+        }
+
+        public void remove(Type stateType) {
+            this.states.remove(stateType);
+        }
+
+        public void clear() {
+            this.states.clear();
+        }
+
+        public void put(Type stateType, Object state) {
+            if (stateType == null || state == null) {
+                return;
+            }
+
+            this.states.put(stateType, state);
+        }
+
+        public Object get(Type stateType) {
+            if (stateType == null) {
+                return null;
+            }
+
+            if (!this.states.containsKey(stateType)) {
+                States state = (States) stateType.newInstance();
+                this.states.put(stateType, state);
+            }
+            return this.states.get(stateType);
+        }
+    }
+
     // #endregion Context
+    // ===============
 
     //===================
     // #region interfaces
     public interface Loader {
         List<Type> load(String sobjectName, String triggerEventName);
+        void setSettings(String sobjectName, List<TriggerHandlerRegistry__mdt> settings);
     }
 
     public interface IContext {
@@ -699,12 +903,16 @@ public class Triggers {
         List<Id> filterBy(SObjectField field, List<Object> values);
     }
 
-    public interface State {
+    public interface States {
         Object get(Type stateType);
         void put(Type stateType, Object state);
         Boolean contains(Type stateType);
         void remove(Type stateType);
         void clear();
+    }
+
+    public interface State {
+        void fetchRelated(Props props);
     }
 
     public interface Skips {
@@ -723,7 +931,6 @@ public class Triggers {
         Manager afterDelete();
         Manager afterUndelete();
 
-        Manager load();
         Manager bind(Type handlerType);
         Manager bind(List<Type> handlerTypes);
         Manager bind(String handlerName);

@@ -588,233 +588,6 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
 
     // ===================
     // #region Test Helper
-    @IsTest
-    static void testProps_IsChanged_Negative() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = true;
-        props.isUpdate = false;
-        props.isDelete = false;
-        props.isUndelete = false;
-
-        List<Account> accounts = createAccounts();
-        props.newList = accounts;
-        props.newMap = new Map<Id, Account>(accounts);
-
-        Boolean isChanged = props.isChanged(accounts[0].Id, Account.Name);
-
-        Assert.areEqual(false, isChanged);
-    }
-
-    @IsTest
-    static void testProps_GetValues_Undelete() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = false;
-        props.isDelete = false;
-        props.isUndelete = true;
-        props.newList = new List<Account> {
-            new Account(Name = 'Account 1'),
-            new Account(Name = 'Account 2'),
-            new Account(Name = 'Account 3')
-        };
-
-        List<Object> names = props.getValues(Account.Name);
-        Assert.areEqual(3, names.size());
-        Assert.areEqual('Account 1', (String)names[0]);
-        Assert.areEqual('Account 2', (String)names[1]);
-        Assert.areEqual('Account 3', (String)names[2]);
-    }
-
-    @IsTest
-    static void testProps_GetValues_Delete() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = false;
-        props.isDelete = true;
-        props.isUndelete = false;
-        props.oldList = new List<Account> {
-            new Account(Name = 'Account 1'),
-            new Account(Name = 'Account 2'),
-            new Account(Name = 'Account 3')
-        };
-
-        List<Object> names = props.getValues(Account.Name);
-        Assert.areEqual(3, names.size());
-        Assert.areEqual('Account 1', (String)names[0]);
-        Assert.areEqual('Account 2', (String)names[1]);
-        Assert.areEqual('Account 3', (String)names[2]);
-    }
-
-    @IsTest
-    static void testProps_FilterChanged_NoChange() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = true;
-        props.isDelete = false;
-        props.isUndelete = false;
-
-        List<Account> accounts = createAccounts();
-        props.oldList = accounts;
-        props.oldMap = new Map<Id, Account>(accounts);
-        props.newList = accounts;
-        props.newMap = new Map<Id, Account>(accounts);
-
-        List<Id> changedIds = props.filterChanged(Account.Name);
-        Boolean isChanged = props.isChanged(Account.Name);
-
-        Assert.areEqual(0, changedIds.size());
-        Assert.areEqual(false, isChanged);
-    }
-
-    @IsTest
-    static void testProps_FilterChanged() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = true;
-        props.isDelete = false;
-        props.isUndelete = false;
-        List<Account> accounts = createAccounts();
-        props.oldList = accounts;
-        props.oldMap = new Map<Id, Account>(accounts);
-        List<Account> newAccounts = accounts.deepClone();
-        newAccounts[0].Id = accounts[0].Id;
-        newAccounts[1].Id = accounts[1].Id;
-        newAccounts[1].Name = 'Account 4';
-        newAccounts[2].Id = accounts[2].Id;
-        newAccounts[2].Description = 'Account 5';
-        props.newList = newAccounts;
-        props.newMap = new Map<Id, Account>(newAccounts);
-
-        List<Id> changedIds = props.filterChanged(Account.Name);
-        Boolean isChanged = props.isChanged(Account.Name);
-
-        Assert.areEqual(1, changedIds.size());
-        Assert.areEqual(true, isChanged);
-    }
-
-
-    @IsTest
-    static void testProps_FilterChangedAny_X2_NoChange() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = true;
-        props.isDelete = false;
-        props.isUndelete = false;
-
-        List<Account> accounts = createAccounts();
-        props.oldList = accounts;
-        props.oldMap = new Map<Id, Account>(accounts);
-        props.newList = accounts;
-        props.newMap = new Map<Id, Account>(accounts);
-
-        List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description);
-        Boolean isChanged = props.isChangedAny(Account.Name, Account.Description);
-
-        Assert.areEqual(0, changedIds.size());
-        Assert.areEqual(false, isChanged);
-    }
-
-    @IsTest
-    static void testProps_FilterChangedAny_X2() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = true;
-        props.isDelete = false;
-        props.isUndelete = false;
-        List<Account> accounts = createAccounts();
-        props.oldList = accounts;
-        props.oldMap = new Map<Id, Account>(accounts);
-        List<Account> newAccounts = accounts.deepClone();
-        newAccounts[0].Id = accounts[0].Id;
-        newAccounts[1].Id = accounts[1].Id;
-        newAccounts[1].Name = 'Account 4';
-        newAccounts[2].Id = accounts[2].Id;
-        newAccounts[2].Description = 'Account 5';
-        props.newList = newAccounts;
-        props.newMap = new Map<Id, Account>(newAccounts);
-
-        List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description);
-        Boolean isChanged = props.isChangedAny(Account.Name, Account.Description);
-
-        Assert.areEqual(2, changedIds.size());
-        Assert.areEqual(true, isChanged);
-    }
-
-    @IsTest
-    static void testProps_FilterChangedAny_X3() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = true;
-        props.isDelete = false;
-        props.isUndelete = false;
-        List<Account> accounts = createAccounts();
-        props.oldList = accounts;
-        props.oldMap = new Map<Id, Account>(accounts);
-        List<Account> newAccounts = accounts.deepClone();
-        newAccounts[0].Id = accounts[0].Id;
-        newAccounts[0].BillingCity = 'Account 4';
-        newAccounts[1].Id = accounts[1].Id;
-        newAccounts[1].Name = 'Account 4';
-        newAccounts[2].Id = accounts[2].Id;
-        newAccounts[2].Description = 'Account 5';
-        props.newList = newAccounts;
-        props.newMap = new Map<Id, Account>(newAccounts);
-
-        List<Id> changedIds = props.filterChangedAny(Account.Name, Account.Description, Account.BillingCity);
-        Boolean isChanged = props.isChangedAny(Account.Name, Account.Description, Account.BillingCity);
-
-        Assert.areEqual(3, changedIds.size());
-        Assert.areEqual(true, isChanged);
-    }
-
-    @IsTest
-    static void testProps_FilterChangedAll_X2_NoChange() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = true;
-        props.isDelete = false;
-        props.isUndelete = false;
-
-        List<Account> accounts = createAccounts();
-        props.oldList = accounts;
-        props.oldMap = new Map<Id, Account>(accounts);
-        props.newList = accounts;
-        props.newMap = new Map<Id, Account>(accounts);
-
-        List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description);
-        Boolean isChanged = props.isChangedAll(Account.Name, Account.Description);
-
-        Assert.areEqual(0, changedIds.size());
-        Assert.areEqual(false, isChanged);
-    }
-
-    @IsTest
-    static void testProps_FilterChangedAll_X2() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = true;
-        props.isDelete = false;
-        props.isUndelete = false;
-        List<Account> accounts = createAccounts();
-        props.oldList = accounts;
-        props.oldMap = new Map<Id, Account>(accounts);
-        List<Account> newAccounts = accounts.deepClone();
-        newAccounts[0].Id = accounts[0].Id;
-        newAccounts[0].Name = 'Account 6';
-        newAccounts[0].Description = 'Account 6';
-        newAccounts[1].Id = accounts[1].Id;
-        newAccounts[1].Name = 'Account 4';
-        newAccounts[2].Id = accounts[2].Id;
-        newAccounts[2].Description = 'Account 5';
-        props.newList = newAccounts;
-        props.newMap = new Map<Id, Account>(newAccounts);
-
-        List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description);
-        Boolean isChanged = props.isChangedAll(Account.Name, Account.Description);
-
-        Assert.areEqual(1, changedIds.size());
-        Assert.areEqual(true, isChanged);
-    }
 
     @IsTest
     static void testProps_sObjectType() {
@@ -843,36 +616,6 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
         Assert.areEqual(Account.SObjectType, props.sObjectType);
     }
 
-    @IsTest
-    static void testProps_FilterChangedAll_X3() {
-        Triggers.Props props = new Triggers.Props();
-        props.isInsert = false;
-        props.isUpdate = true;
-        props.isDelete = false;
-        props.isUndelete = false;
-        List<Account> accounts = createAccounts();
-        props.oldList = accounts;
-        props.oldMap = new Map<Id, Account>(accounts);
-        List<Account> newAccounts = accounts.deepClone();
-        newAccounts[0].Id = accounts[0].Id;
-        newAccounts[0].Name = 'Account 6';
-        newAccounts[0].Description = 'Account 6';
-        newAccounts[0].BillingCity = 'Dalian';
-        newAccounts[1].Id = accounts[1].Id;
-        newAccounts[1].Name = 'Account 4';
-        newAccounts[1].Description = 'Account 4';
-        newAccounts[2].Id = accounts[2].Id;
-        newAccounts[2].Description = 'Account 5';
-        newAccounts[2].BillingCity = 'Dalian';
-        props.newList = newAccounts;
-        props.newMap = new Map<Id, Account>(newAccounts);
-
-        List<Id> changedIds = props.filterChangedAll(Account.Name, Account.Description, Account.BillingCity);
-        Boolean isChanged = props.isChangedAll(Account.Name, Account.Description, Account.BillingCity);
-
-        Assert.areEqual(1, changedIds.size());
-        Assert.areEqual(true, isChanged);
-    }
     // #endregion
     // ===================
 
@@ -1145,9 +888,6 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
             Assert.areEqual(3, context.props.oldMap.size());
             Assert.areEqual(3, context.props.newList.size());
             Assert.areEqual(3, context.props.newMap.size());
-
-            Assert.areEqual(3, context.props.filterChanged(Account.Name).size());
-            Assert.areEqual(true, context.props.isChanged(Account.Name));
         }
 
         public void afterUpdate(Triggers.Context context) {
@@ -1155,9 +895,6 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
             Assert.areEqual(3, context.props.oldMap.size());
             Assert.areEqual(3, context.props.newList.size());
             Assert.areEqual(3, context.props.newMap.size());
-
-            Assert.areEqual(3, context.props.filterChanged(Account.Name).size());
-            Assert.areEqual(true, context.props.isChanged(Account.Name));
         }
 
         public void beforeDelete(Triggers.Context context) {
@@ -1165,7 +902,6 @@ public class TriggersTest implements Triggers.Handler, Triggers.BeforeInsert {
             Assert.areEqual(3, context.props.oldMap.size());
             Assert.areEqual(null, context.props.newList);
             Assert.areEqual(null, context.props.newMap);
-
         }
 
         public void afterDelete(Triggers.Context context) {

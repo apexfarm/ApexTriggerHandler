@@ -512,7 +512,7 @@ public class Triggers {
         }
     }
 
-    public class Props implements IProps {
+    public class Props {
         // Standard Properties
         @TestVisible
         public Boolean isExecuting { get; private set; }
@@ -652,162 +652,6 @@ public class Triggers {
                 this.sObjectType = this.newList.getSObjectType();
             }
         }
-
-        @TestVisible
-        private Boolean isChanged(Id objectId, SObjectField field) {
-            if (this.isUpdate) {
-                Object oldValue = this.oldMap.get(objectId).get(field);
-                Object newValue = this.newMap.get(objectId).get(field);
-                return oldValue != newValue;
-            }
-            return false;
-        }
-
-        public Boolean isChanged(SObjectField field1) {
-            return isChangedAny(new List<SObjectField>{ field1 });
-        }
-
-        public Boolean isChangedAny(SObjectField field1, SObjectField field2) {
-            return isChangedAny(new List<SObjectField>{ field1, field2 });
-        }
-
-        public Boolean isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3) {
-            return isChangedAny(new List<SObjectField>{ field1, field2, field3 });
-        }
-
-        public Boolean isChangedAny(List<SObjectField> fields) {
-            return filterChangedAny(fields).size() > 0;
-        }
-
-        public Boolean isChangedAll(SObjectField field1, SObjectField field2) {
-            return isChangedAll(new List<SObjectField>{ field1, field2 });
-        }
-
-        public Boolean isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3) {
-            return isChangedAll(new List<SObjectField>{ field1, field2, field3 });
-        }
-
-        public Boolean isChangedAll(List<SObjectField> fields) {
-            return filterChangedAll(fields).size() > 0;
-        }
-
-        public List<Id> filterChanged(SObjectField field1) {
-            return filterChangedAny(new List<SObjectField>{ field1 });
-        }
-
-        public List<Id> filterChangedAny(SObjectField field1, SObjectField field2) {
-            return filterChangedAny(new List<SObjectField>{ field1, field2 });
-        }
-
-        public List<Id> filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3) {
-            return filterChangedAny(new List<SObjectField>{ field1, field2, field3 });
-        }
-
-        public List<Id> filterChangedAny(List<SObjectField> fields) {
-            List<Id> changedIds = new List<Id>();
-            if (this.isUpdate) {
-                for (SObject newObj : this.newList) {
-                    Id objectId = newObj.Id;
-                    for (SObjectField field : fields) {
-                        if (isChanged(objectId, field)) {
-                            changedIds.add(objectId);
-                            break;
-                        }
-                    }
-                }
-            }
-            return changedIds;
-        }
-
-        public List<Id> filterChangedAll(SObjectField field1, SObjectField field2) {
-            return filterChangedAll(new List<SObjectField>{ field1, field2 });
-        }
-
-        public List<Id> filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3) {
-            return filterChangedAll(new List<SObjectField>{ field1, field2, field3 });
-        }
-
-        public List<Id> filterChangedAll(List<SObjectField> fields) {
-            List<Id> changedIds = new List<Id>();
-            if (this.isUpdate) {
-                for (SObject newObj : this.newList) {
-                    Id objectId = newObj.Id;
-                    changedIds.add(objectId);
-                    for (SObjectField field : fields) {
-                        if (!isChanged(objectId, field)) {
-                            changedIds.remove(changedIds.size() - 1);
-                            break;
-                        }
-                    }
-                }
-            }
-            return changedIds;
-        }
-
-        public Boolean containsRecordTypeNames(List<String> recordTypeNames) {
-            return null;
-        }
-
-        public Boolean contains(SObjectField field, List<Object> values) {
-            if (values == null || values.isEmpty()) {
-                return false;
-            }
-
-            List<SObject> objects = new List<SObject>();
-            if (this.isInsert || this.isUpdate || this.isUndelete) {
-                objects = this.newList;
-            } else if (this.isDelete) {
-                objects = this.oldList;
-            }
-
-            for (SObject obj : objects) {
-                if (values.contains(obj.get(field))) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public List<Id> filterByRecordTypeNames(List<String> recordTypeNames) {
-            return null;
-        }
-
-        public List<Id> filterBy(SObjectField field, List<Object> values) {
-            List<Id> matchedIds = new List<Id>();
-            if (values == null || values.isEmpty()) {
-                return matchedIds;
-            }
-
-            List<SObject> objects = new List<SObject>();
-            if (this.isInsert || this.isUpdate || this.isUndelete) {
-                objects = this.newList;
-            } else if (this.isDelete) {
-                objects = this.oldList;
-            }
-
-            for (SObject obj : objects) {
-                if (values.contains(obj.get(field))) {
-                    matchedIds.add(obj.Id);
-                }
-            }
-            return matchedIds;
-        }
-
-        public List<Object> getValues(SObjectField field) {
-            List<Object> values = new List<Object>();
-
-            List<SObject> objects = new List<SObject>();
-            if (this.isInsert || this.isUpdate || this.isUndelete) {
-                objects = this.newList;
-            } else if (this.isDelete) {
-                objects = this.oldList;
-            }
-
-            for (SObject obj : objects) {
-                values.add(obj.get(field));
-            }
-            return values;
-        }
     }
 
     public class SkipsImpl implements Skips {
@@ -896,30 +740,6 @@ public class Triggers {
     public interface IContext {
         void stop();
         void next();
-    }
-
-    public interface IProps {
-        List<Object> getValues(SObjectField field);
-
-        Boolean isChanged(SObjectField field1);
-        Boolean isChangedAny(SObjectField field1, SObjectField field2);
-        Boolean isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3);
-        Boolean isChangedAny(List<SObjectField> fields);
-        Boolean isChangedAll(SObjectField field1, SObjectField field2);
-        Boolean isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3);
-        Boolean isChangedAll(List<SObjectField> fields);
-        Boolean containsRecordTypeNames(List<String> recordTypeNames);
-        Boolean contains(SObjectField field, List<Object> values);
-
-        List<Id> filterChanged(SObjectField field1);
-        List<Id> filterChangedAny(SObjectField field1, SObjectField field2);
-        List<Id> filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3);
-        List<Id> filterChangedAny(List<SObjectField> fields);
-        List<Id> filterChangedAll(SObjectField field1, SObjectField field2);
-        List<Id> filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3);
-        List<Id> filterChangedAll(List<SObjectField> fields);
-        List<Id> filterByRecordTypeNames(List<String> recordTypeNames);
-        List<Id> filterBy(SObjectField field, List<Object> values);
     }
 
     public interface States {

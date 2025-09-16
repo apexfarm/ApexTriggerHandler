@@ -32,7 +32,7 @@
 
 public class Triggers {
     public static final SkipsImpl skips = new SkipsImpl();
-    public static final StatesImpl states = new StatesImpl();
+    private static final StatesImpl states = new StatesImpl();
 
     // ===============
     // #region Settings
@@ -414,7 +414,7 @@ public class Triggers {
     // ===============
     // #region Context
     public class Context implements IContext {
-        public final SkipsImpl skips { get; private set; }
+        private final SkipsImpl skips { get; private set; }
         public final Props props { get; private set; }
         public final States states { get; private set; }
 

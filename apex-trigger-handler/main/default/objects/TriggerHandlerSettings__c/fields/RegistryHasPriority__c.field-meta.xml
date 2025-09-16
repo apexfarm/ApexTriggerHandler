@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>ApexHasPriority__c</fullName>
+    <fullName>RegistryHasPriority__c</fullName>
     <defaultValue>false</defaultValue>
-    <label>Apex Has Priority</label>
+    <label>Registry Has Priority</label>
     <trackTrending>false</trackTrending>
     <type>Checkbox</type>
 </CustomField>

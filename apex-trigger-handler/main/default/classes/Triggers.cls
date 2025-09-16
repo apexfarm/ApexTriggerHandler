@@ -57,7 +57,7 @@ public class Triggers {
                 if (record.Name == null) {
                     record = new TriggerHandlerSettings__c();
                     record.Name = 'Default';
-                    record.ApexHasPriority__c = false;
+                    record.RegistryHasPriority__c = false;
                     record.BypassTriggers__c = false;
                     record.BypassSObjects__c = null;
                 }
@@ -66,9 +66,9 @@ public class Triggers {
             set;
         }
 
-        public Boolean apexHasPriority {
+        public Boolean registryHasPriority {
             get {
-                return record.ApexHasPriority__c == true;
+                return record.RegistryHasPriority__c == true;
             }
         }
 
@@ -219,7 +219,7 @@ public class Triggers {
         private ManagerImpl(Props props) {
             this.props = props;
             this.context = new Context(this.props);
-            if (!settings.apexHasPriority) {
+            if (!settings.registryHasPriority) {
                 this.load();
             }
         }
@@ -345,7 +345,7 @@ public class Triggers {
         }
 
         public void execute() {
-            if (settings.apexHasPriority) {
+            if (settings.registryHasPriority) {
                 this.canBind = true;
                 this.load();
                 this.canBind = false;

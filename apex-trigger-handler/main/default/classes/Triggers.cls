@@ -41,9 +41,7 @@ public class Triggers {
     public static void bypassTriggers(Boolean bypass) {
         settings.record.BypassTriggers__c = bypass;
     }
-    public static void bypassRegistry(Boolean bypass) {
-        settings.record.BypassRegistry__c = bypass;
-    }
+
     public static void bypassSObjects(String bypass) {
         settings.record.BypassSObjects__c = bypass;
         settings.bypassSObjects = null;
@@ -60,7 +58,6 @@ public class Triggers {
                     record = new TriggerHandlerSettings__c();
                     record.Name = 'Default';
                     record.ApexHasPriority__c = false;
-                    record.BypassRegistry__c = false;
                     record.BypassTriggers__c = false;
                     record.BypassSObjects__c = null;
                 }
@@ -72,12 +69,6 @@ public class Triggers {
         public Boolean apexHasPriority {
             get {
                 return record.ApexHasPriority__c == true;
-            }
-        }
-
-        public Boolean bypassRegistry {
-            get {
-                return record.BypassRegistry__c == true;
             }
         }
 
@@ -139,6 +130,7 @@ public class Triggers {
             handlerTypeDict = new Map<String, Type>();
         }
 
+        // TODO: ANY_EVENT not implemented yet
         public List<Type> load(String sobjectName, String triggerEventName) {
             List<Type> handlerTypes = new List<Type>();
             if (
@@ -268,10 +260,6 @@ public class Triggers {
         }
 
         private Manager load() {
-            if (settings.BypassRegistry == true) {
-                return this;
-            }
-
             if (!canBind) {
                 return this;
             }
@@ -512,7 +500,7 @@ public class Triggers {
         }
     }
 
-    public class Props {
+    public class Props implements IProps {
         // Standard Properties
         @TestVisible
         public Boolean isExecuting { get; private set; }
@@ -740,6 +728,9 @@ public class Triggers {
     public interface IContext {
         void stop();
         void next();
+    }
+
+    public interface IProps {
     }
 
     public interface States {

@@ -4,7 +4,7 @@
     <externalId>false</externalId>
     <fieldManageability>SubscriberControlled</fieldManageability>
     <label>SObject</label>
-    <length>80</length>
+    <length>60</length>
     <required>true</required>
     <type>Text</type>
     <unique>false</unique>

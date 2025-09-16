@@ -10,9 +10,9 @@
         <valueSetDefinition>
             <sorted>false</sorted>
             <value>
-                <fullName>DEFAULT</fullName>
+                <fullName>ANY_EVENT</fullName>
                 <default>true</default>
-                <label>Default</label>
+                <label>Any Event</label>
             </value>
             <value>
                 <fullName>BEFORE_INSERT</fullName>

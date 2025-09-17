@@ -54,7 +54,7 @@ Completely rewritten from v1.0. Retains the best features, removes unnecessary c
 
 ### 1.1 Custom Setting
 
-<img src="docs/images/custom-settings.png" width=600>
+<p align="center"><img src="docs/images/custom-settings.png" width=600></p>
 
 The `Registry Has Priority` setting determines whether handlers registered via custom metadata types take precedence over those registered directly in Apex code. For more details about bypass flags, see the table below:
 
@@ -66,7 +66,7 @@ The `Registry Has Priority` setting determines whether handlers registered via c
 
 ### 1.2 Custom Metadata
 
-<img src="docs/images/custom-metadata-01.png" width=770>
+<p align="center"><img src="docs/images/custom-metadata-01.png" width=770></p>
 
 | Field Name      | Data Type | Description                                                                                                       |
 | --------------- | --------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -99,7 +99,7 @@ public class AccountTriggerHandler implements Triggers.BeforeInsert, Triggers.Be
 
 Handlers registered via the registry are loaded automatically. Each handler is associated with the correct SObject and trigger event based on its configuration.
 
-<img src="docs/images/custom-metadata-01.png" width=770>
+<p align="center"><img src="docs/images/custom-metadata-01.png" width=770></p>
 
 ```java
 trigger AccountTrigger on Account (before update, after update) {

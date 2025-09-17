@@ -54,7 +54,7 @@
 
 ### 1.1 自定义设置
 
-<img src="images/custom-settings.png" width=600>
+<p align="center"><img src="images/custom-settings.png" width=600></p>
 
 `Registry Has Priority` 设置决定通过自定义元数据类型注册的 Handler 是否优先于直接在 Apex 代码中注册的 Handler。有关 `Bypass` 标志的更多信息，请参见下表：
 
@@ -66,7 +66,7 @@
 
 ### 1.2 自定义元数据
 
-<img src="images/custom-metadata-01.png" width=770>
+<p align="center"><img src="images/custom-metadata-01.png" width=770></p>
 
 | 字段名          | 数据类型 | 说明                                                                                 |
 | --------------- | -------- | ------------------------------------------------------------------------------------ |
@@ -99,7 +99,7 @@ public class AccountTriggerHandler implements Triggers.BeforeInsert, Triggers.Be
 
 通过注册表注册的 Handler 会自动加载。每个 Handler 根据配置与正确的 SObject 和触发事件关联。
 
-<img src="images/custom-metadata-01.png" width=770>
+<p align="center"><img src="images/custom-metadata-01.png" width=770></p>
 
 ```java
 trigger AccountTrigger on Account (before update, after update) {

@@ -17,7 +17,7 @@ The Salesforce Apex trigger framework for clean, scalable, and maintainable auto
 
 ---
 
-**Support:** If you find this library helpful, please consider sharing it on Twitter or recommending it to your friends or colleagues.
+**Support:** If you find this library helpful, please consider sharing it on Twitter or recommending it to your friends and colleagues.
 
 ### Translations
 
@@ -25,7 +25,7 @@ The Salesforce Apex trigger framework for clean, scalable, and maintainable auto
 
 ### Release v2.0
 
-- Completely rewritten from v1.0. Retains the best features, removes unnecessary complexity, and introduces new capabilities.
+Completely rewritten from v1.0. Retains the best features, removes unnecessary complexity, and introduces new capabilities.
 
 ## Table of Contents
 

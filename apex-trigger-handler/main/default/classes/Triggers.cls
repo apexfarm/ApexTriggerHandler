@@ -31,274 +31,512 @@
  */
 
 public class Triggers {
-    public static final Boolean WHEN_ALWAYS = true;
-    public static final Skips skips = new Skips();
+    public static final Skips skips = new SkipsImpl();
+    public static final States states = new StatesImpl();
+    @TestVisible
+    private static final Loader loader = new LoaderImpl();
+    @TestVisible
+    private static final Settings settings = new Settings();
+    private static Map<String, Type> handlerTypeCache = new Map<String, Type>();
+
+    // ===============
+    // #region Settings
 
     @TestVisible
-    private static Loader LOADER {
-        get {
-            if (LOADER == null) {
-                Type LoaderType = Type.forName('TriggersLoader');
-                if (LoaderType == null) {
-                    LOADER = new NullLoader();
-                } else {
-                    LOADER = (Loader) LoaderType.newInstance();
-                }
-            }
-            return LOADER;
-        }
-        set;
+    private static void setRegistry(SObjectType sObjectType, List<TriggerHandlerRegistry__mdt> records) {
+        loader.put(sObjectType, records);
     }
 
+    @TestVisible
+    private static void setSettings(Boolean hasPriority, Boolean bypassTriggers, String bypassSObjects) {
+        settings.record.RegistryHasPriority__c = hasPriority;
+        settings.record.BypassTriggers__c = bypassTriggers;
+        settings.record.BypassSObjects__c = bypassSObjects;
+        settings.bypassSObjects = null;
+    }
+
+    private class Settings {
+        public TriggerHandlerSettings__c record {
+            get {
+                if (record == null) {
+                    record = TriggerHandlerSettings__c.getInstance();
+                }
+
+                if (record.Name == null) {
+                    record = new TriggerHandlerSettings__c();
+                    record.Name = 'Default';
+                    record.RegistryHasPriority__c = false;
+                    record.BypassTriggers__c = false;
+                    record.BypassSObjects__c = null;
+                }
+                return record;
+            }
+            set;
+        }
+
+        public Boolean registryHasPriority {
+            get {
+                return record.RegistryHasPriority__c == true;
+            }
+        }
+
+        public Boolean bypassTriggers {
+            get {
+                return record.BypassTriggers__c == true;
+            }
+        }
+
+        public Set<String> bypassSObjects {
+            get {
+                if (bypassSObjects == null) {
+                    bypassSObjects = new Set<String>();
+                    if (!String.isBlank(record.BypassSObjects__c)) {
+                        for (String sobjectName : record.BypassSObjects__c.split('\n')) {
+                            if (!String.isBlank(sobjectName)) {
+                                bypassSObjects.add(sobjectName.trim().toUpperCase());
+                            }
+                        }
+                    }
+                }
+                return bypassSObjects;
+            }
+            set;
+        }
+
+        public Boolean bypassSObject(SObjectType sobjectType) {
+            if (sobjectType == null) {
+                return false;
+            }
+            String sObjectName = String.valueOf(sobjectType);
+            return this.bypassSObjects.contains(sobjectName.toUpperCase());
+        }
+    }
+
+    // #endregion
+    // ===============
+
+    // ===============
+    // #region Loader
+    private class LoaderImpl implements Loader {
+        private Map<String, List<TriggerHandlerRegistry__mdt>> registry = new Map<String, List<TriggerHandlerRegistry__mdt>>();
+
+        public List<String> load(SObjectType sobjectType, TriggerOperation operationType) {
+            List<String> handlerNames = new List<String>();
+            if (sobjectType == null || operationType == null) {
+                return handlerNames;
+            }
+
+            String sobjectName = String.valueOf(sobjectType);
+            String operationTypeName = operationType.name();
+            if (!registry.containsKey(sobjectName)) {
+                List<TriggerHandlerRegistry__mdt> registredHandlers = [
+                    SELECT HandlerClass__c, TriggerEvent__c
+                    FROM TriggerHandlerRegistry__mdt
+                    WHERE IsActive__c = TRUE AND SObject__c = :sobjectName
+                    ORDER BY ExecutionOrder__c
+                ];
+                registry.put(sobjectName, registredHandlers);
+            }
+
+            for (TriggerHandlerRegistry__mdt registeredHandler : registry.get(sobjectName)) {
+                if (
+                    registeredHandler.TriggerEvent__c == operationTypeName ||
+                    registeredHandler.TriggerEvent__c == 'ANY_EVENT'
+                ) {
+                    handlerNames.add(registeredHandler.HandlerClass__c);
+                }
+            }
+            return handlerNames;
+        }
+
+        public void put(SObjectType sobjectType, List<TriggerHandlerRegistry__mdt> records) {
+            if (sobjectType == null || records == null) {
+                return;
+            }
+            this.registry.put(String.valueOf(sobjectType), records);
+        }
+    }
+
+    // #endregion
+    // ===============
+
+    // ===============
+    // #region Manager
+
     public static Manager prepare() {
-        Props props = new Props();
-        return new ManagerImpl(props);
+        Context context = new Context();
+        if (
+            settings.bypassTriggers &&
+            (settings.bypassSObjects.isEmpty() || settings.bypassSObject(context.sObjectType))
+        ) {
+            return new NullManager(context);
+        }
+
+        return new ManagerImpl(context);
     }
 
     @TestVisible
     private static Manager prepare(TriggerOperation operationType, List<SObject> oldList, List<SObject> newList) {
-        Props props = new Props(operationType, oldList, newList);
-        return new ManagerImpl(props);
+        Context context = new Context(operationType, oldList, newList);
+        if (
+            settings.bypassTriggers &&
+            (settings.bypassSObjects.isEmpty() || settings.bypassSObject(context.sObjectType))
+        ) {
+            return new NullManager(context);
+        }
+
+        switch on operationType {
+            when BEFORE_INSERT, AFTER_INSERT, AFTER_UNDELETE {
+                if (newList == null) {
+                    throw new IllegalArgumentException('New list cannot be null for ' + operationType + ' event.');
+                }
+            }
+            when BEFORE_UPDATE, AFTER_UPDATE {
+                if (newList == null) {
+                    throw new IllegalArgumentException('New list cannot be null for ' + operationType + ' event.');
+                }
+                if (oldList == null) {
+                    throw new IllegalArgumentException('Old list cannot be null for ' + operationType + ' event.');
+                }
+            }
+            when BEFORE_DELETE, AFTER_DELETE {
+                if (oldList == null) {
+                    throw new IllegalArgumentException('Old list cannot be null for ' + operationType + ' event.');
+                }
+            }
+        }
+
+        return new ManagerImpl(context);
     }
 
     @TestVisible
     private class ManagerImpl implements Manager {
-        public final Props props { get; private set; }
         public final Context context { get; private set; }
 
-        Boolean canBind = false;
+        Boolean canBind = true;
 
-        private ManagerImpl(Props props) {
-            this.props = props;
-            this.context = new Context(this.props);
+        private ManagerImpl(Context context) {
+            this.context = context;
+            if (settings.registryHasPriority) {
+                this.load();
+            }
         }
 
         public Manager beforeInsert() {
-            canBind = this.props.operationType == TriggerOperation.BEFORE_INSERT;
+            this.canBind = this.context.operationType == TriggerOperation.BEFORE_INSERT;
             return this;
         }
 
         public Manager afterInsert() {
-            canBind = this.props.operationType == TriggerOperation.AFTER_INSERT;
+            this.canBind = this.context.operationType == TriggerOperation.AFTER_INSERT;
             return this;
         }
 
         public Manager beforeUpdate() {
-            canBind = this.props.operationType == TriggerOperation.BEFORE_UPDATE;
+            this.canBind = this.context.operationType == TriggerOperation.BEFORE_UPDATE;
             return this;
         }
 
         public Manager afterUpdate() {
-            canBind = this.props.operationType == TriggerOperation.AFTER_UPDATE;
+            this.canBind = this.context.operationType == TriggerOperation.AFTER_UPDATE;
             return this;
         }
 
         public Manager beforeDelete() {
-            canBind = this.props.operationType == TriggerOperation.BEFORE_DELETE;
+            this.canBind = this.context.operationType == TriggerOperation.BEFORE_DELETE;
             return this;
         }
 
         public Manager afterDelete() {
-            canBind = this.props.operationType == TriggerOperation.AFTER_DELETE;
+            this.canBind = this.context.operationType == TriggerOperation.AFTER_DELETE;
             return this;
         }
 
         public Manager afterUndelete() {
-            canBind = this.props.operationType == TriggerOperation.AFTER_UNDELETE;
+            this.canBind = this.context.operationType == TriggerOperation.AFTER_UNDELETE;
             return this;
         }
 
-        public Manager bind(Handler handler) {
-            if (canBind) {
-                Boolean isImplemented = false;
-                switch on this.props.operationType {
-                    when BEFORE_INSERT {
-                        isImplemented = handler instanceof BeforeInsert;
-                    }
-                    when AFTER_INSERT {
-                        isImplemented = handler instanceof AfterInsert;
-                    }
-                    when BEFORE_UPDATE {
-                        isImplemented = handler instanceof BeforeUpdate;
-                    }
-                    when AFTER_UPDATE {
-                        isImplemented = handler instanceof AfterUpdate;
-                    }
-                    when BEFORE_DELETE {
-                        isImplemented = handler instanceof BeforeDelete;
-                    }
-                    when AFTER_DELETE {
-                        isImplemented = handler instanceof AfterDelete;
-                    }
-                    when AFTER_UNDELETE {
-                        isImplemented = handler instanceof AfterUndelete;
-                    }
-                    when else {
-                    }
-                }
-                if (isImplemented) {
-                    this.context.handlers.add(handler);
-                }
+        private Manager load() {
+            List<String> handlerNames = loader.load(this.context.sObjectType, this.context.operationType);
+            this.bind(handlerNames);
+            return this;
+        }
+
+        public Manager bind(List<Type> handlerTypes) {
+            if (!canBind) {
+                return this;
+            }
+
+            if (handlerTypes == null) {
+                return this;
+            }
+
+            for (Type handlerType : handlerTypes) {
+                this.bind(handlerType);
             }
             return this;
         }
 
-        public Manager load() {
-            if (canBind) {
-                List<Handler> handlers = LOADER.load(this.props.sObjectType, this.props.operationType);
-                for (Handler handler : handlers) {
-                    this.bind(handler);
+        public Manager bind(Type handlerType) {
+            if (!canBind) {
+                return this;
+            }
+
+            if (handlerType == null) {
+                return this;
+            }
+
+            if (!Handler.class.isAssignableFrom(handlerType)) {
+                throw new IllegalArgumentException('Type [' + handlerType + '] is not a Handler type.');
+            }
+
+            Boolean isImplemented = false;
+            switch on this.context.operationType {
+                when BEFORE_INSERT {
+                    isImplemented = BeforeInsert.class.isAssignableFrom(handlerType);
                 }
+                when AFTER_INSERT {
+                    isImplemented = AfterInsert.class.isAssignableFrom(handlerType);
+                }
+                when BEFORE_UPDATE {
+                    isImplemented = BeforeUpdate.class.isAssignableFrom(handlerType);
+                }
+                when AFTER_UPDATE {
+                    isImplemented = AfterUpdate.class.isAssignableFrom(handlerType);
+                }
+                when BEFORE_DELETE {
+                    isImplemented = BeforeDelete.class.isAssignableFrom(handlerType);
+                }
+                when AFTER_DELETE {
+                    isImplemented = AfterDelete.class.isAssignableFrom(handlerType);
+                }
+                when AFTER_UNDELETE {
+                    isImplemented = AfterUndelete.class.isAssignableFrom(handlerType);
+                }
+                when else {
+                }
+            }
+
+            if (isImplemented) {
+                this.context.handlerTypes.add(handlerType);
+            }
+
+            return this;
+        }
+
+        public Manager bind(List<String> handlerNames) {
+            if (!canBind) {
+                return this;
+            }
+
+            if (handlerNames == null) {
+                return this;
+            }
+
+            for (String handlerName : handlerNames) {
+                this.bind(handlerName);
             }
             return this;
         }
 
-        public Manager load(String tag) {
-            if (canBind) {
-                List<Handler> handlers = LOADER.load(this.props.sObjectType, this.props.operationType, tag);
-                for (Handler handler : handlers) {
-                    this.bind(handler);
-                }
+        public Manager bind(String handlerName) {
+            if (String.isBlank(handlerName)) {
+                return this;
             }
+
+            if (!canBind) {
+                return this;
+            }
+
+            Type handlerType = getHandlerType(handlerName);
+            return this.bind(handlerType);
+        }
+
+        private Type getHandlerType(String handlerName) {
+            handlerName = handlerName.trim().toUpperCase();
+            if (!handlerTypeCache.containsKey(handlerName)) {
+                Type handlerType = Type.forName(handlerName);
+                if (handlerType == null) {
+                    throw new TypeException('Handler class [' + handlerName + '] cannot be found.');
+                }
+                handlerTypeCache.put(handlerName, handlerType);
+            }
+            return handlerTypeCache.get(handlerName);
+        }
+
+        public void execute() {
+            if (!settings.registryHasPriority) {
+                this.canBind = true;
+                this.load();
+                this.canBind = false;
+            }
+
+            this.context.execute();
+            this.context.isExecuting = false;
+        }
+    }
+
+    private class NullManager implements Manager {
+        private NullManager(Context context) {
+        }
+
+        public Manager beforeInsert() {
+            return this;
+        }
+
+        public Manager afterInsert() {
+            return this;
+        }
+
+        public Manager beforeUpdate() {
+            return this;
+        }
+
+        public Manager afterUpdate() {
+            return this;
+        }
+
+        public Manager beforeDelete() {
+            return this;
+        }
+
+        public Manager afterDelete() {
+            return this;
+        }
+
+        public Manager afterUndelete() {
+            return this;
+        }
+
+        public Manager bind(Type handlerType) {
+            return this;
+        }
+
+        public Manager bind(List<Type> handlerTypes) {
+            return this;
+        }
+
+        public Manager bind(String handlerName) {
+            return this;
+        }
+
+        public Manager bind(List<String> handlerNames) {
             return this;
         }
 
         public void execute() {
-            this.context.execute();
-            this.props.isExecuting = false;
         }
     }
 
-    public class Skips {
-        @TestVisible
-        private final Set<Type> skippedHandlers = new Set<Type>();
+    // #endregion
+    // ===============
 
-        public void add(type handlerType) {
-            this.skippedHandlers.add(handlerType);
-        }
-
-        public void remove(type handlerType) {
-            this.skippedHandlers.remove(handlerType);
-        }
-
-        public Boolean contains(type handlerType) {
-            return this.skippedHandlers.contains(handlerType);
-        }
-
-        @TestVisible
-        private Boolean contains(Handler handler) {
-            return contains(getHandlerType(handler));
-        }
-
-        public void clear() {
-            this.skippedHandlers.clear();
-        }
-
-        private Type getHandlerType(Handler handler) {
-            String printName = String.valueOf(handler);
-            String typeName = printName.substring(0, printName.indexOf(':'));
-            return Type.forName(typeName);
-        }
-    }
-
+    // ===============
     // #region Context
 
-    public class Context {
-        public final Map<Object, Object> state { get; private set; }
-        public final Skips skips { get; private set; }
-        public final Props props { get; private set; }
-
-        private final List<Handler> handlers = new List<Handler>();
+    public class Context extends Props implements IContext {
+        private final List<Type> handlerTypes = new List<Type>();
         private Integer currIndex = -1;
-        private Boolean isExecutingCriteria = false;
 
-        private Context(Props props) {
-            this.props = props;
-            this.state = new Map<Object, Object>();
-            this.skips = Triggers.skips;
+        private Context() {
+            super();
         }
 
-        private void reset() {
-            this.currIndex = -1;
+        private Context(TriggerOperation operationType, List<SObject> oldList, List<SObject> newList) {
+            super(operationType, oldList, newList);
         }
 
         public void stop() {
-            this.currIndex = this.handlers.size();
-        }
-
-        private Boolean hasNext() {
-            return this.currIndex < this.handlers.size() - 1;
+            this.currIndex = this.handlerTypes.size();
         }
 
         public void next() {
-            // prevent calling context.next() in criteria phase
-            if (!this.isExecutingCriteria) {
+            try {
                 while (hasNext()) {
+                    System.debug('next: ' + this.handlerTypes[this.currIndex + 1]);
                     runNext();
                 }
+            } catch (Exception ex) {
+                stop();
+                throw ex;
             }
         }
 
         private void execute() {
             reset();
             while (hasNext()) {
+                System.debug('execute: ' + this.handlerTypes[this.currIndex + 1]);
                 runNext();
             }
         }
 
+        private void reset() {
+            this.currIndex = -1;
+        }
+
+        private Boolean hasNext() {
+            return this.currIndex < this.handlerTypes.size() - 1;
+        }
+
         private void runNext() {
             this.currIndex++;
-            Handler handler = this.handlers[this.currIndex];
-            this.isExecutingCriteria = true;
-            if (!this.skips.contains(handler) && handler.criteria(this) == true) {
-                this.isExecutingCriteria = false;
-                switch on this.props.operationType {
-                    when BEFORE_INSERT {
-                        ((BeforeInsert) handler).beforeInsert(this);
-                    }
-                    when AFTER_INSERT {
-                        ((AfterInsert) handler).afterInsert(this);
-                    }
-                    when BEFORE_UPDATE {
-                        ((BeforeUpdate) handler).beforeUpdate(this);
-                    }
-                    when AFTER_UPDATE {
-                        ((AfterUpdate) handler).afterUpdate(this);
-                    }
-                    when BEFORE_DELETE {
-                        ((BeforeDelete) handler).beforeDelete(this);
-                    }
-                    when AFTER_DELETE {
-                        ((AfterDelete) handler).afterDelete(this);
-                    }
-                    when AFTER_UNDELETE {
-                        ((AfterUndelete) handler).afterUndelete(this);
-                    }
-                    when else {
-                    }
+            Type handlerType = this.handlerTypes[this.currIndex];
+
+            if (Triggers.skips.contains(handlerType)) {
+                return;
+            }
+
+            Handler handler = (Handler) handlerType.newInstance();
+
+            switch on this.operationType {
+                when BEFORE_INSERT {
+                    ((BeforeInsert) handler).beforeInsert(this);
                 }
-            } else {
-                this.isExecutingCriteria = false;
+                when AFTER_INSERT {
+                    ((AfterInsert) handler).afterInsert(this);
+                }
+                when BEFORE_UPDATE {
+                    ((BeforeUpdate) handler).beforeUpdate(this);
+                }
+                when AFTER_UPDATE {
+                    ((AfterUpdate) handler).afterUpdate(this);
+                }
+                when BEFORE_DELETE {
+                    ((BeforeDelete) handler).beforeDelete(this);
+                }
+                when AFTER_DELETE {
+                    ((AfterDelete) handler).afterDelete(this);
+                }
+                when AFTER_UNDELETE {
+                    ((AfterUndelete) handler).afterUndelete(this);
+                }
+                when else {
+                }
             }
         }
     }
 
-    public class Props implements IProps {
-        // Standard Properties
+    public virtual class EventProps {
+        @TestVisible
+        public Boolean isBefore { get; protected set; }
+        @TestVisible
+        public Boolean isAfter { get; protected set; }
+        @TestVisible
+        public Boolean isInsert { get; protected set; }
+        @TestVisible
+        public Boolean isUpdate { get; protected set; }
+        @TestVisible
+        public Boolean isDelete { get; protected set; }
+        @TestVisible
+        public Boolean isUndelete { get; protected set; }
+        @TestVisible
+        public TriggerOperation operationType { get; protected set; }
+    }
+
+    public virtual class Props extends EventProps implements IProps {
         @TestVisible
         public Boolean isExecuting { get; private set; }
-        @TestVisible
-        public Boolean isBefore { get; private set; }
-        @TestVisible
-        public Boolean isAfter { get; private set; }
-        @TestVisible
-        public Boolean isInsert { get; private set; }
-        @TestVisible
-        public Boolean isUpdate { get; private set; }
-        @TestVisible
-        public Boolean isDelete { get; private set; }
-        @TestVisible
-        public Boolean isUndelete { get; private set; }
         @TestVisible
         public List<SObject> oldList { get; private set; }
         @TestVisible
@@ -308,11 +546,7 @@ public class Triggers {
         @TestVisible
         public Map<Id, SObject> newMap { get; private set; }
         @TestVisible
-        public TriggerOperation operationType { get; private set; }
-        @TestVisible
         public Integer size { get; private set; }
-
-        // Custom Properties
         @TestVisible
         public SObjectType sObjectType { get; private set; }
 
@@ -404,17 +638,15 @@ public class Triggers {
                 when else {
                 }
             }
-            this.setSize();
-            this.setSObjectType();
-        }
 
-        private void setSize() {
+            //setSize();
             this.size = 0;
             if (this.oldList != null) {
                 this.size = this.oldList.size();
             } else if (this.newList != null) {
                 this.size = this.newList.size();
             }
+            this.setSObjectType();
         }
 
         @TestVisible
@@ -425,154 +657,122 @@ public class Triggers {
                 this.sObjectType = this.newList.getSObjectType();
             }
         }
+    }
 
-        public List<Object> getValues(SObjectField field) {
-            List<Object> values = new List<Object>();
-            List<SObject> objects = new List<SObject>();
-
-            if (this.isInsert || this.isUpdate || this.isUndelete) {
-                objects = this.newList;
-            } else if (this.isDelete) {
-                objects = this.oldList;
-            }
-
-            for (SObject obj : objects) {
-                values.add(obj.get(field));
-            }
-            return values;
-        }
-
+    public class SkipsImpl implements Skips {
         @TestVisible
-        private Boolean isChanged(Id objectId, SObjectField field) {
-            if (this.isUpdate) {
-                Object oldValue = this.oldMap.get(objectId).get(field);
-                Object newValue = this.newMap.get(objectId).get(field);
-                return oldValue != newValue;
+        private final Set<Type> skippedHandlers = new Set<Type>();
+
+        public void add(type handlerType) {
+            if (handlerType == null) {
+                return;
             }
-            return false;
-        }
 
-        public Boolean isChanged(SObjectField field1) {
-            return isChangedAny(new List<SObjectField>{ field1 });
-        }
-
-        public Boolean isChangedAny(SObjectField field1, SObjectField field2) {
-            return isChangedAny(new List<SObjectField>{ field1, field2 });
-        }
-
-        public Boolean isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3) {
-            return isChangedAny(new List<SObjectField>{ field1, field2, field3 });
-        }
-
-        public Boolean isChangedAny(List<SObjectField> fields) {
-            return filterChangedAny(fields).size() > 0;
-        }
-
-        public Boolean isChangedAll(SObjectField field1, SObjectField field2) {
-            return isChangedAll(new List<SObjectField>{ field1, field2 });
-        }
-
-        public Boolean isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3) {
-            return isChangedAll(new List<SObjectField>{ field1, field2, field3 });
-        }
-
-        public Boolean isChangedAll(List<SObjectField> fields) {
-            return filterChangedAll(fields).size() > 0;
-        }
-
-        public List<Id> filterChanged(SObjectField field1) {
-            return filterChangedAny(new List<SObjectField>{ field1 });
-        }
-
-        public List<Id> filterChangedAny(SObjectField field1, SObjectField field2) {
-            return filterChangedAny(new List<SObjectField>{ field1, field2 });
-        }
-
-        public List<Id> filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3) {
-            return filterChangedAny(new List<SObjectField>{ field1, field2, field3 });
-        }
-
-        public List<Id> filterChangedAny(List<SObjectField> fields) {
-            List<Id> changedIds = new List<Id>();
-            if (this.isUpdate) {
-                for (SObject newObj : this.newList) {
-                    Id objectId = newObj.Id;
-                    for (SObjectField field : fields) {
-                        if (isChanged(objectId, field)) {
-                            changedIds.add(objectId);
-                            break;
-                        }
-                    }
-                }
+            if (!Handler.class.isAssignableFrom(handlerType)) {
+                throw new IllegalArgumentException('Type [' + handlerType + '] is not a Handler type.');
             }
-            return changedIds;
+
+            this.skippedHandlers.add(handlerType);
         }
 
-        public List<Id> filterChangedAll(SObjectField field1, SObjectField field2) {
-            return filterChangedAll(new List<SObjectField>{ field1, field2 });
-        }
-
-        public List<Id> filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3) {
-            return filterChangedAll(new List<SObjectField>{ field1, field2, field3 });
-        }
-
-        public List<Id> filterChangedAll(List<SObjectField> fields) {
-            List<Id> changedIds = new List<Id>();
-            if (this.isUpdate) {
-                for (SObject newObj : this.newList) {
-                    Id objectId = newObj.Id;
-                    changedIds.add(objectId);
-                    for (SObjectField field : fields) {
-                        if (!isChanged(objectId, field)) {
-                            changedIds.remove(changedIds.size() - 1);
-                            break;
-                        }
-                    }
-                }
+        public void add(List<type> handlerTypes) {
+            if (handlerTypes == null) {
+                return;
             }
-            return changedIds;
+
+            for (Type handlerType : handlerTypes) {
+                this.add(handlerType);
+            }
+        }
+
+        public void remove(type handlerType) {
+            this.skippedHandlers.remove(handlerType);
+        }
+
+        public Boolean contains(type handlerType) {
+            return this.skippedHandlers.contains(handlerType);
+        }
+
+        public void clear() {
+            this.skippedHandlers.clear();
+        }
+    }
+
+    public class StatesImpl implements States {
+        private final Map<Type, State> states = new Map<Type, State>();
+
+        public Boolean contains(Type stateType) {
+            return this.states.containsKey(stateType);
+        }
+
+        public void put(Type stateType, State state) {
+            if (stateType == null || state == null) {
+                return;
+            }
+
+            this.states.put(stateType, state);
+        }
+
+        public Object get(Type stateType) {
+            if (stateType == null) {
+                return null;
+            }
+
+            if (!State.class.isAssignableFrom(stateType)) {
+                throw new IllegalArgumentException('Type [' + stateType + '] is not a State type.');
+            }
+
+            if (!this.states.containsKey(stateType)) {
+                State state = (State) stateType.newInstance();
+                this.states.put(stateType, state);
+            }
+            return this.states.get(stateType);
+        }
+
+        public void remove(Type stateType) {
+            this.states.remove(stateType);
+        }
+
+        public void clear() {
+            this.states.clear();
         }
     }
 
     // #endregion Context
+    // ===============
 
     //===================
     // #region interfaces
-    public interface Loader {
-        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent);
-        List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag);
+    private interface Loader {
+        List<String> load(SObjectType sobjectType, TriggerOperation triggerEventName);
+        void put(SObjectType sobjectType, List<TriggerHandlerRegistry__mdt> records);
     }
 
-    @TestVisible
-    private class NullLoader implements Loader {
-        public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent) {
-            return new List<Handler>();
-        }
-
-        public List<Handler> load(SObjectType sObjectType, TriggerOperation triggerEvent, String tag) {
-            return new List<Handler>();
-        }
+    private interface IContext {
+        void stop();
+        void next();
     }
 
-    public interface IProps {
-        List<Object> getValues(SObjectField field);
-        Boolean isChanged(SObjectField field1);
-        Boolean isChangedAny(SObjectField field1, SObjectField field2);
-        Boolean isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3);
-        Boolean isChangedAny(List<SObjectField> fields);
-        Boolean isChangedAll(SObjectField field1, SObjectField field2);
-        Boolean isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3);
-        Boolean isChangedAll(List<SObjectField> fields);
-        List<Id> filterChanged(SObjectField field1);
-        List<Id> filterChangedAny(SObjectField field1, SObjectField field2);
-        List<Id> filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3);
-        List<Id> filterChangedAny(List<SObjectField> fields);
-        List<Id> filterChangedAll(SObjectField field1, SObjectField field2);
-        List<Id> filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3);
-        List<Id> filterChangedAll(List<SObjectField> fields);
+    private interface IProps {
+    }
+
+    public interface States {
+        Boolean contains(Type stateType);
+        void put(Type stateType, State state);
+        Object get(Type stateType);
+        void remove(Type stateType);
+        void clear();
     }
 
     public interface State {
+    }
+
+    public interface Skips {
+        void add(type handlerType);
+        void add(List<type> handlerTypes);
+        Boolean contains(type handlerType);
+        void remove(type handlerType);
+        void clear();
     }
 
     public interface Manager {
@@ -583,41 +783,43 @@ public class Triggers {
         Manager beforeDelete();
         Manager afterDelete();
         Manager afterUndelete();
-        Manager bind(Handler handler);
-        Manager load();
-        Manager load(String tag);
+
+        Manager bind(Type handlerType);
+        Manager bind(List<Type> handlerTypes);
+        Manager bind(String handlerName);
+        Manager bind(List<String> handlerNames);
+
         void execute();
     }
 
-    public interface Handler {
-        Boolean criteria(Context context);
+    private interface Handler {
     }
 
-    public interface BeforeInsert {
+    public interface BeforeInsert extends Handler {
         void beforeInsert(Context context);
     }
 
-    public interface AfterInsert {
+    public interface AfterInsert extends Handler {
         void afterInsert(Context context);
     }
 
-    public interface BeforeUpdate {
+    public interface BeforeUpdate extends Handler {
         void beforeUpdate(Context context);
     }
 
-    public interface AfterUpdate {
+    public interface AfterUpdate extends Handler {
         void afterUpdate(Context context);
     }
 
-    public interface BeforeDelete {
+    public interface BeforeDelete extends Handler {
         void beforeDelete(Context context);
     }
 
-    public interface AfterDelete {
+    public interface AfterDelete extends Handler {
         void afterDelete(Context context);
     }
 
-    public interface AfterUndelete {
+    public interface AfterUndelete extends Handler {
         void afterUndelete(Context context);
     }
     // #endregion

@@ -32,22 +32,33 @@
 
 public class Triggers {
     public static final SkipsImpl skips = new SkipsImpl();
-    private static final StatesImpl states = new StatesImpl();
+    public static final StatesImpl states = new StatesImpl();
+    private static final Settings settings = new Settings();
+    private static final Map<String, Type> handlerTypeCache = new Map<String, Type>();
+
+    private static Type getHandlerType(String className) {
+        className = className.trim().toUpperCase();
+        if (!handlerTypeCache.containsKey(className)) {
+            Type handlerType = Type.forName(className);
+            if (handlerType == null) {
+                throw new TypeException('Handler class [' + className + '] cannot be found.');
+            }
+            handlerTypeCache.put(className, handlerType);
+        }
+        return handlerTypeCache.get(className);
+    }
 
     // ===============
     // #region Settings
-    public static final Settings settings = new Settings();
 
-    public static void bypassTriggers(Boolean bypass) {
-        settings.record.BypassTriggers__c = bypass;
-    }
-
-    public static void bypassSObjects(String bypass) {
-        settings.record.BypassSObjects__c = bypass;
+    public static void setSettings(Boolean hasPriority, Boolean bypassTriggers, String bypassSObjects) {
+        settings.record.RegistryHasPriority__c = hasPriority;
+        settings.record.BypassTriggers__c = bypassTriggers;
+        settings.record.BypassSObjects__c = bypassSObjects;
         settings.bypassSObjects = null;
     }
 
-    public class Settings {
+    private class Settings {
         private TriggerHandlerSettings__c record {
             get {
                 if (record == null) {
@@ -122,65 +133,25 @@ public class Triggers {
     }
 
     public class TriggersLoader implements Loader {
-        private final Map<String, Map<String, List<TriggerHandlerRegistry__mdt>>> handlerRegistry { get; set; }
-        private final Map<String, Type> handlerTypeDict { get; set; }
-
-        private TriggersLoader() {
-            handlerRegistry = new Map<String, Map<String, List<TriggerHandlerRegistry__mdt>>>();
-            handlerTypeDict = new Map<String, Type>();
-        }
-
-        // TODO: ANY_EVENT not implemented yet
         public List<Type> load(String sobjectName, String triggerEventName) {
             List<Type> handlerTypes = new List<Type>();
-            if (
-                handlerRegistry.containsKey(sobjectName) &&
-                handlerRegistry.get(sobjectName).containsKey(triggerEventName)
-            ) {
-                for (TriggerHandlerRegistry__mdt setting : handlerRegistry.get(sobjectName).get(triggerEventName)) {
-                    handlerTypes.add(getHandlerType(setting.HandlerClass__c));
-                }
+
+            List<TriggerHandlerRegistry__mdt> registredHandlers = [
+                SELECT HandlerClass__c
+                FROM TriggerHandlerRegistry__mdt
+                WHERE
+                    IsActive__c = TRUE
+                    AND SObject__c = :sobjectName
+                    AND (TriggerEvent__c = :triggerEventName
+                    OR TriggerEvent__c = 'ANY_EVENT')
+                ORDER BY ExecutionOrder__c
+            ];
+
+            for (TriggerHandlerRegistry__mdt setting : registredHandlers) {
+                handlerTypes.add(getHandlerType(setting.HandlerClass__c));
             }
+
             return handlerTypes;
-        }
-
-        private void loadHandlerSettings(String sobjectName) {
-            if (!handlerRegistry.containsKey(sobjectName)) {
-                List<TriggerHandlerRegistry__mdt> registredHandlers = [
-                    SELECT Id, Label, SObject__c, TriggerEvent__c, HandlerClass__c, ExecutionOrder__c
-                    FROM TriggerHandlerRegistry__mdt
-                    WHERE IsActive__c = TRUE AND SObject__c = :sobjectName
-                    ORDER BY SObject__c, TriggerEvent__c, ExecutionOrder__c
-                ];
-
-                setSettings(sobjectName, registredHandlers);
-            }
-        }
-
-        public void setSettings(String sobjectName, List<TriggerHandlerRegistry__mdt> registredHandlers) {
-            handlerRegistry.put(sobjectName, new Map<String, List<TriggerHandlerRegistry__mdt>>());
-
-            String preTriggerEvent = null;
-            for (TriggerHandlerRegistry__mdt registeredHandler : registredHandlers) {
-                String triggerEvent = registeredHandler.TriggerEvent__c;
-                if (preTriggerEvent != triggerEvent) {
-                    preTriggerEvent = triggerEvent;
-                    handlerRegistry.get(sobjectName).put(triggerEvent, new List<TriggerHandlerRegistry__mdt>());
-                }
-
-                handlerRegistry.get(sobjectName).get(triggerEvent).add(registeredHandler);
-            }
-        }
-
-        private Type getHandlerType(String className) {
-            if (!handlerTypeDict.containsKey(className)) {
-                Type handlerType = Type.forName(className);
-                if (handlerType == null) {
-                    throw new TypeException('Handler class [' + className + '] cannot be found.');
-                }
-                handlerTypeDict.put(className, handlerType);
-            }
-            return handlerTypeDict.get(className);
         }
     }
 
@@ -191,71 +162,75 @@ public class Triggers {
     // #region Manager
 
     public static Manager prepare() {
-        Props props = new Props();
-        if (settings.BypassTriggers == true || settings.bypassSObject(props.sObjectType)) {
-            return new NullManager(props);
+        Context context = new Context();
+        if (
+            settings.bypassTriggers &&
+            (settings.bypassSObjects.isEmpty() || settings.bypassSObject(context.sObjectType))
+        ) {
+            return new NullManager(context);
         }
 
-        return new ManagerImpl(props);
+        return new ManagerImpl(context);
     }
 
     @TestVisible
     private static Manager prepare(TriggerOperation operationType, List<SObject> oldList, List<SObject> newList) {
-        Props props = new Props(operationType, oldList, newList);
-        if (settings.BypassTriggers == true || settings.bypassSObject(props.sObjectType)) {
-            return new NullManager(props);
+        Context context = new Context(operationType, oldList, newList);
+        if (
+            settings.bypassTriggers &&
+            (settings.bypassSObjects.isEmpty() || settings.bypassSObject(context.sObjectType))
+        ) {
+            return new NullManager(context);
         }
 
-        return new ManagerImpl(props);
+        return new ManagerImpl(context);
     }
 
     @TestVisible
     private class ManagerImpl implements Manager {
-        public final Props props { get; private set; }
         public final Context context { get; private set; }
 
         Boolean canBind = true;
 
-        private ManagerImpl(Props props) {
-            this.props = props;
-            this.context = new Context(this.props);
+        private ManagerImpl(Context context) {
+            this.context = context;
             if (!settings.registryHasPriority) {
                 this.load();
             }
         }
 
         public Manager beforeInsert() {
-            this.canBind = this.props.operationType == TriggerOperation.BEFORE_INSERT;
+            this.canBind = this.context.operationType == TriggerOperation.BEFORE_INSERT;
             return this;
         }
 
         public Manager afterInsert() {
-            this.canBind = this.props.operationType == TriggerOperation.AFTER_INSERT;
+            this.canBind = this.context.operationType == TriggerOperation.AFTER_INSERT;
             return this;
         }
 
         public Manager beforeUpdate() {
-            this.canBind = this.props.operationType == TriggerOperation.BEFORE_UPDATE;
+            this.canBind = this.context.operationType == TriggerOperation.BEFORE_UPDATE;
             return this;
         }
 
         public Manager afterUpdate() {
-            this.canBind = this.props.operationType == TriggerOperation.AFTER_UPDATE;
+            this.canBind = this.context.operationType == TriggerOperation.AFTER_UPDATE;
             return this;
         }
 
         public Manager beforeDelete() {
-            this.canBind = this.props.operationType == TriggerOperation.BEFORE_DELETE;
+            this.canBind = this.context.operationType == TriggerOperation.BEFORE_DELETE;
             return this;
         }
 
         public Manager afterDelete() {
-            this.canBind = this.props.operationType == TriggerOperation.AFTER_DELETE;
+            this.canBind = this.context.operationType == TriggerOperation.AFTER_DELETE;
             return this;
         }
 
         public Manager afterUndelete() {
-            this.canBind = this.props.operationType == TriggerOperation.AFTER_UNDELETE;
+            this.canBind = this.context.operationType == TriggerOperation.AFTER_UNDELETE;
             return this;
         }
 
@@ -265,23 +240,36 @@ public class Triggers {
             }
 
             List<Type> handlerTypes = LOADER.load(
-                String.valueOf(this.props.sObjectType),
-                this.props.operationType.name()
+                String.valueOf(this.context.sObjectType),
+                this.context.operationType.name()
             );
 
-            for (Type handlerType : handlerTypes) {
-                this.bind(handlerType);
-            }
+            this.bind(handlerTypes);
 
             return this;
         }
 
-        public Manager bind(Type handlerType) {
-            if (handlerType == null) {
+        public Manager bind(List<Type> handlerTypes) {
+            if (!canBind) {
                 return this;
             }
 
+            if (handlerTypes == null) {
+                return this;
+            }
+
+            for (Type handlerType : handlerTypes) {
+                this.bind(handlerType);
+            }
+            return this;
+        }
+
+        public Manager bind(Type handlerType) {
             if (!canBind) {
+                return this;
+            }
+
+            if (handlerType == null) {
                 return this;
             }
 
@@ -290,7 +278,7 @@ public class Triggers {
             }
 
             Boolean isImplemented = false;
-            switch on this.props.operationType {
+            switch on this.context.operationType {
                 when BEFORE_INSERT {
                     isImplemented = BeforeInsert.class.isAssignableFrom(handlerType);
                 }
@@ -323,7 +311,18 @@ public class Triggers {
             return this;
         }
 
-        public Manager bind(List<Type> handlerTypes) {
+        public Manager bind(List<String> handlerNames) {
+            if (!canBind) {
+                return this;
+            }
+
+            if (handlerNames == null) {
+                return this;
+            }
+
+            for (String handlerName : handlerNames) {
+                this.bind(handlerName);
+            }
             return this;
         }
 
@@ -336,12 +335,8 @@ public class Triggers {
                 return this;
             }
 
-            Type handlerType = Type.forName(handlerName);
+            Type handlerType = getHandlerType(handlerName);
             return this.bind(handlerType);
-        }
-
-        public Manager bind(List<String> handlerNames) {
-            return this;
         }
 
         public void execute() {
@@ -352,12 +347,12 @@ public class Triggers {
             }
 
             this.context.execute();
-            this.props.isExecuting = false;
+            this.context.isExecuting = false;
         }
     }
 
     private class NullManager implements Manager {
-        private NullManager(Props props) {
+        private NullManager(Context context) {
         }
 
         public Manager beforeInsert() {
@@ -413,19 +408,16 @@ public class Triggers {
 
     // ===============
     // #region Context
-    public class Context implements IContext {
-        private final SkipsImpl skips { get; private set; }
-        public final Props props { get; private set; }
-        public final States states { get; private set; }
-
+    public class Context extends Props implements IContext {
         private final List<Type> handlerTypes = new List<Type>();
         private Integer currIndex = -1;
-        private Boolean isExecutingShouldExecute = false;
 
-        private Context(Props props) {
-            this.skips = Triggers.skips;
-            this.states = Triggers.states;
-            this.props = props;
+        private Context() {
+            super();
+        }
+
+        private Context(TriggerOperation operationType, List<SObject> oldList, List<SObject> newList) {
+            super(operationType, oldList, newList);
         }
 
         public void stop() {
@@ -433,11 +425,8 @@ public class Triggers {
         }
 
         public void next() {
-            // Prevent calling context.next() during the shouldExecute phase
-            if (!this.isExecutingShouldExecute) {
-                while (hasNext()) {
-                    runNext();
-                }
+            while (hasNext()) {
+                runNext();
             }
         }
 
@@ -460,62 +449,60 @@ public class Triggers {
             this.currIndex++;
             Type handlerType = this.handlerTypes[this.currIndex];
 
-            if (this.skips.contains(handlerType)) {
+            if (Triggers.skips.contains(handlerType)) {
                 return;
             }
 
             Handler handler = (Handler) handlerType.newInstance();
 
-            this.isExecutingShouldExecute = true;
-            if (handler.shouldExecute(this) == true) {
-                this.isExecutingShouldExecute = false;
-                switch on this.props.operationType {
-                    when BEFORE_INSERT {
-                        ((BeforeInsert) handler).beforeInsert(this);
-                    }
-                    when AFTER_INSERT {
-                        ((AfterInsert) handler).afterInsert(this);
-                    }
-                    when BEFORE_UPDATE {
-                        ((BeforeUpdate) handler).beforeUpdate(this);
-                    }
-                    when AFTER_UPDATE {
-                        ((AfterUpdate) handler).afterUpdate(this);
-                    }
-                    when BEFORE_DELETE {
-                        ((BeforeDelete) handler).beforeDelete(this);
-                    }
-                    when AFTER_DELETE {
-                        ((AfterDelete) handler).afterDelete(this);
-                    }
-                    when AFTER_UNDELETE {
-                        ((AfterUndelete) handler).afterUndelete(this);
-                    }
-                    when else {
-                    }
+            switch on this.operationType {
+                when BEFORE_INSERT {
+                    ((BeforeInsert) handler).beforeInsert(this);
                 }
-            } else {
-                this.isExecutingShouldExecute = false;
+                when AFTER_INSERT {
+                    ((AfterInsert) handler).afterInsert(this);
+                }
+                when BEFORE_UPDATE {
+                    ((BeforeUpdate) handler).beforeUpdate(this);
+                }
+                when AFTER_UPDATE {
+                    ((AfterUpdate) handler).afterUpdate(this);
+                }
+                when BEFORE_DELETE {
+                    ((BeforeDelete) handler).beforeDelete(this);
+                }
+                when AFTER_DELETE {
+                    ((AfterDelete) handler).afterDelete(this);
+                }
+                when AFTER_UNDELETE {
+                    ((AfterUndelete) handler).afterUndelete(this);
+                }
+                when else {
+                }
             }
         }
     }
 
-    public class Props implements IProps {
-        // Standard Properties
+    public virtual class EventProps {
+        @TestVisible
+        public Boolean isBefore { get; protected set; }
+        @TestVisible
+        public Boolean isAfter { get; protected set; }
+        @TestVisible
+        public Boolean isInsert { get; protected set; }
+        @TestVisible
+        public Boolean isUpdate { get; protected set; }
+        @TestVisible
+        public Boolean isDelete { get; protected set; }
+        @TestVisible
+        public Boolean isUndelete { get; protected set; }
+        @TestVisible
+        public TriggerOperation operationType { get; protected set; }
+    }
+
+    public virtual class Props extends EventProps implements IProps {
         @TestVisible
         public Boolean isExecuting { get; private set; }
-        @TestVisible
-        public Boolean isBefore { get; private set; }
-        @TestVisible
-        public Boolean isAfter { get; private set; }
-        @TestVisible
-        public Boolean isInsert { get; private set; }
-        @TestVisible
-        public Boolean isUpdate { get; private set; }
-        @TestVisible
-        public Boolean isDelete { get; private set; }
-        @TestVisible
-        public Boolean isUndelete { get; private set; }
         @TestVisible
         public List<SObject> oldList { get; private set; }
         @TestVisible
@@ -525,11 +512,7 @@ public class Triggers {
         @TestVisible
         public Map<Id, SObject> newMap { get; private set; }
         @TestVisible
-        public TriggerOperation operationType { get; private set; }
-        @TestVisible
         public Integer size { get; private set; }
-
-        // Custom Properties
         @TestVisible
         public SObjectType sObjectType { get; private set; }
 
@@ -678,14 +661,6 @@ public class Triggers {
             return this.states.containsKey(stateType);
         }
 
-        public void remove(Type stateType) {
-            this.states.remove(stateType);
-        }
-
-        public void clear() {
-            this.states.clear();
-        }
-
         public void put(Type stateType, State state) {
             if (stateType == null || state == null) {
                 return;
@@ -713,6 +688,14 @@ public class Triggers {
             }
             return this.states.get(stateType);
         }
+
+        public void remove(Type stateType) {
+            this.states.remove(stateType);
+        }
+
+        public void clear() {
+            this.states.clear();
+        }
     }
 
     // #endregion Context
@@ -722,7 +705,6 @@ public class Triggers {
     // #region interfaces
     public interface Loader {
         List<Type> load(String sobjectName, String triggerEventName);
-        void setSettings(String sobjectName, List<TriggerHandlerRegistry__mdt> settings);
     }
 
     public interface IContext {
@@ -734,9 +716,9 @@ public class Triggers {
     }
 
     public interface States {
-        Object get(Type stateType);
-        void put(Type stateType, State state);
         Boolean contains(Type stateType);
+        void put(Type stateType, State state);
+        Object get(Type stateType);
         void remove(Type stateType);
         void clear();
     }
@@ -769,7 +751,6 @@ public class Triggers {
     }
 
     public interface Handler {
-        Boolean shouldExecute(Context context);
     }
 
     public interface BeforeInsert extends Handler {

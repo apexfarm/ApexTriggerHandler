@@ -23,28 +23,11 @@ The Salesforce Apex trigger framework for clean, scalable, and maintainable auto
 ## Table of Contents
 
 - [1. Setting](#1-setting)
-  - [1.1 Custom Setting](#11-custom-setting)
-  - [1.2 Custom Metadata](#12-custom-metadata)
-- [2. Trigger](#2-trigger)
-  - [2.1 Bind with Registry](#21-bind-with-registry)
-  - [2.2 Bind with Apex](#22-bind-with-apex)
-  - [2.3 Bind with Both](#23-bind-with-both)
-- [3. Handler](#3-handler)
-  - [3.1 Implementation](#31-implementation)
-  - [3.2 Skipping Handlers](#32-skipping-handlers)
-  - [3.3 Error Handling](#33-error-handling)
-- [4. Props](#4-props)
-- [5. States](#5-states)
-  - [5.1 Implicit State](#51-implicit-state)
-  - [5.2 Explicit State](#52-explicit-state)
-- [6. Tests](#6-tests)
-  - [6.1 Test with Mockup Data](#61-test-with-mockup-data)
-  - [6.2 Test with Mockup Library](#62-test-with-mockup-library)
-- [7. APIs](#7-apis)
-  - [7.1 Trigger Handler Interfaces](#71-trigger-handler-interfaces)
-  - [7.2 Triggers.Context](#72-triggerscontext)
-  - [7.3 Triggers.Props](#73-triggersprops)
-- [8. License](#8-license)
+- [2. Handler](#2-handler)
+- [3. Execution Control](#3-execution-control)
+- [4. Tests](#4-tests)
+- [5. APIs](#5-apis)
+- [6. License](#6-license)
 
 ## 1. Setting
 
@@ -52,18 +35,17 @@ The Salesforce Apex trigger framework for clean, scalable, and maintainable auto
 
 <img src="docs/images/custom-settings.png" width=600>
 
-The `Registry Has Priority` setting determines whether handlers registered via custom metadata types take precedence over those registered directly in Apex code. For more information about bypass flags, refer to the table below:
+The `Registry Has Priority` setting determines whether handlers registered via custom metadata types take precedence over those registered directly in Apex code. For more details about bypass flags, see the table below:
 
 | Bypass Triggers | Bypass SObjects                       | Description                                                          |
 | --------------- | ------------------------------------- | -------------------------------------------------------------------- |
 | false           | Empty                                 | By default, no trigger handlers are bypassed.                        |
 | true            | Empty                                 | All trigger handlers registered through this framework are bypassed. |
 | true            | Account<br />Contact<br />Opportunity | Only trigger handlers for the specified SObjects are bypassed.       |
-| false           | Account<br />Contact<br />Opportunity | No trigger handlers are bypassed, even for the specified SObjects.   |
 
 ### 1.2 Custom Metadata
 
-<img src="docs/images/custom-metadata.png" width=770>
+<img src="docs/images/custom-metadata-01.png" width=770>
 
 | Field Name      | Data Type | Description                                                                                                       |
 | --------------- | --------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -73,11 +55,30 @@ The `Registry Has Priority` setting determines whether handlers registered via c
 | Execution Order | Number    | **Required.** Determines the sequence in which handlers are executed.                                             |
 | Is Active       | Checkbox  | Indicates whether the handler is enabled or disabled.                                                             |
 
-## 2. Trigger
+## 2. Handler
 
-### 2.1 Bind with Registry
+### 2.1 Implementation
 
-Load trigger handlers from the registry. Each handler is automatically bound to the appropriate SObject trigger event.
+To create a trigger handler, define a class that implements the corresponding handler interfaces.
+
+```java
+// Explicitly declare the required interfaces for clarity.
+public class AccountTriggerHandler implements Triggers.BeforeInsert, Triggers.BeforeUpdate {
+    // Implement Triggers.BeforeInsert
+    public void beforeInsert(Triggers.Context context) {
+    }
+
+    // Implement Triggers.BeforeUpdate
+    public void beforeUpdate(Triggers.Context context) {
+    }
+}
+```
+
+### 2.2 Registering with Registry
+
+Handlers registered via the registry are loaded automatically. Each handler is associated with the correct SObject and trigger event based on its configuration.
+
+<img src="docs/images/custom-metadata-01.png" width=770>
 
 ```java
 trigger AccountTrigger on Account (before update, after update) {
@@ -85,71 +86,93 @@ trigger AccountTrigger on Account (before update, after update) {
 }
 ```
 
-### 2.2 Bind with Apex
+### 2.3 Registering with Apex
 
-Handlers can be bound using either class types or class names. Using class names is often preferred for flexibility. You can bind handlers to all events for simpler control, or to specific events for more granular management.
-
-```java
-trigger AccountTrigger on Account (before update, after update) {
-    Triggers.prepare()
-        .bind(AccountHandler01.class) // handlers bound to any event
-        .bind('AccountHandler02')
-        .beforeUpdate()               // handlers bound to a specific event
-            .bind(AccountHandler03.class)
-            .bind('AccountHandler04')
-        .execute();
-}
-```
-
-### 2.3 Bind with Both
-
-You can register trigger handlers using both metadata and Apex code simultaneously. By default, handlers registered in Apex code are loaded automatically and take precedence. If you want handlers registered via metadata to have priority, adjust the `Registry Has Priority` setting as described above.
+Handlers can be registered using either class types or class names. Using class names is often preferred for flexibility. You can bind handlers to all events for simpler control, or to specific events for more granular management.
 
 ```java
 trigger AccountTrigger on Account (before update, after update) {
     Triggers.prepare()
-        .bind(AccountHandler01.class)
+        .bind(AccountTriggerHandler1.class) // handlers bound to any event
+        .bind('AccountTriggerHandler2')
+        .beforeUpdate()                     // handlers bound to a specific event
+            .bind(AccountTriggerHandler3.class)
+            .bind('AccountTriggerHandler4')
         .execute();
 }
 ```
 
-## 3. Handler
+**Note:** You can register trigger handlers using both custom metadata and Apex code at the same time. By default, handlers registered in Apex code have higher priority. To give priority to handlers registered via custom metadata, enable the `Registry Has Priority` setting as described above.
 
-### 3.1 Implementation
+### 2.4 Props
 
-To create a trigger handler, define a class that implements the appropriate handler interfaces. See the example below for detailed comments and tips on how to customize your trigger handler.
+All static variables from the `Trigger` class are now accessible via the `context` object. Always use `context` to access trigger properties, such as `context.oldList` and `context.newList`.
 
 ```java
-// 1. Explicitly declare the required interfaces for clarity and maintainability.
-public class AccountTriggerHandler implements Triggers.BeforeInsert, Triggers.BeforeUpdate {
-
-    // 2. This method runs before any handler logic, allowing you to determine if
-    //    the handler should execute for the current context.
-    public Boolean shouldExecute(Triggers.Context context) {
-        return true;
-    }
-
+public class AccountTriggerHandler implements Triggers.BeforeInsert {
     public void beforeInsert(Triggers.Context context) {
-        handleExecute(context);
-    }
-
-    public void beforeUpdate(Triggers.Context context) {
-        handleExecute(context);
-    }
-
-    private void handleExecute(Triggers.Context context) {
-        // 3-1. Optionally call context.next() to execute the next handler.
-        //      This is useful if you need to perform logic after all subsequent handlers run.
-        context.next();
-
-        // 3-2. Optionally call context.stop() to prevent any further
-        //      handlers from executing, similar to the STOP action in Process Builder.
-        context.stop();
+        if (context.isBefore && context.isInsert) {
+            for (Account account : (List<Account>) context.newList) {
+                // Your logic here
+            }
+        }
     }
 }
 ```
 
-### 3.2 Skipping Handlers
+### 2.5 States
+
+Use `Triggers.states` to manage state objects. This is a singleton, meaning it is shared across all triggers within the same transaction. State classes are automatically initialized the first time they are accessed.
+
+```java
+public class AccountTriggerHandler implements Triggers.BeforeInsert {
+    public void beforeInsert(Triggers.Context context) {
+        // Retrieve and update a state instance as needed.
+        CounterState counter = (CounterState) Triggers.states.get(CounterState.class);
+        counter.increase();
+    }
+}
+```
+
+You can also set a state object in advance, which is useful for initializing values:
+
+```java
+// Make sure to check if the state already exists.`
+if (!Triggers.states.contains(CounterState.class)) {
+    Triggers.states.put(CounterState.class, new CounterState(100));
+}
+```
+
+State classes must implement the `Triggers.State` interface.
+
+```java
+public class CounterState implements Triggers.State {
+    public Integer count { get; private set; }
+    
+    public CounterState() {}
+    
+    public CounterState(Integer count) {
+        this.count = count;
+    }
+    
+    public void increase() {
+        this.count++;
+    }
+}
+```
+
+You can also remove state objects to free up resources:
+
+```java
+// Remove a specific state.
+Triggers.states.remove(CounterState.class);
+// Or clear all states.
+Triggers.states.clear();
+```
+
+## 3. Execution Control
+
+### 3.1 Skipping Handlers
 
 You can skip specific handlers in your Apex code as shown below:
 
@@ -159,6 +182,23 @@ Triggers.skips.add(AccountTriggerHandler.class);
 insert accounts;
 // Restore the handler after the operation.
 Triggers.skips.remove(AccountTriggerHandler.class);
+// Or simply clear all skipped handlers.
+Triggers.skips.clear();
+```
+
+### 3.2 Handler Flow Control
+
+```java
+public class AccountTriggerHandler implements Triggers.BeforeInsert {
+    public void beforeInsert(Triggers.Context context) {
+        // Optionally call context.next() to execute all subsequent handlers.
+        context.next();
+        // This is useful if you need to perform logic after all subsequent handlers run.
+
+        // Optionally call context.stop() to prevent any further handlers from executing.
+        context.stop();
+    }
+}
 ```
 
 ### 3.3 Error Handling
@@ -166,14 +206,17 @@ Triggers.skips.remove(AccountTriggerHandler.class);
 You can centralize exception handling for all subsequent handlers by implementing a dedicated error handler. This ensures that any exceptions thrown by handlers executed after `context.next()` are caught and managed in a single location. For example:
 
 ```java
-public class ErrorTriggerHandler implements Triggers.BeforeInsert {
-    public Boolean shouldExecute(Triggers.Context context) {
-        return true;
+public class ErrorTriggerHandler implements Triggers.BeforeInsert, Triggers.AfterInsert {
+    public void beforeInsert(Triggers.Context context) {
+		execute(context);
     }
 
-    public void beforeInsert(Triggers.Context context) {
+    public void afterInsert(Triggers.Context context) {
+		execute(context);
+    }
+
+    private void execute(Triggers.Context context) {
         try {
-            // Run all subsequent handlers.
             context.next();
         } catch (Exception ex) {
             // Handle exceptions from subsequent handlers here
@@ -182,75 +225,9 @@ public class ErrorTriggerHandler implements Triggers.BeforeInsert {
 }
 ```
 
-## 4. Props
+## 4. Tests
 
-Avoid directly referencing static variables on the `Trigger` class. Instead, always access trigger properties through `context.props`, such as `context.props.oldList` and `context.props.newList`.
-
-```java
-public class AccountTriggerHandler implements Triggers.BeforeInsert {
-    public Boolean shouldExecute(Triggers.Context context) {
-        return true;
-    }
-
-    public void beforeInsert(Triggers.Context context) {
-        if (context.props.isInsert) {
-            for (Account account : (List<Account>) context.props.newList) {
-                // do business logic
-            }
-        }
-    }
-}
-```
-
-## 5. States
-
-Use `context.states` to manage state objects. This is a singleton, meaning it is shared across different triggers within the same transaction.
-
-### 5.1 Implicit State
-
-State objects are automatically initialized the first time they are accessed.
-
-```java
-public class AccountTriggerHandler implements Triggers.BeforeInsert {
-    public Boolean shouldExecute(Triggers.Context context) {
-        return true;
-    }
-
-    public void beforeInsert(Triggers.Context context) {
-        // Retrieve and update a state instance as needed.
-        CounterState state = (CounterState) context.states.get(CounterState.class);
-        ++state.counter;
-    }
-}
-```
-
-State classes must implement the `Triggers.State` interface. This interface does not require any methods to be implemented.
-
-```java
-public class CounterState implements Triggers.State {
-    public Integer counter { get; set; }
-}
-```
-
-### 5.2 Explicit State
-
-You can also explicitly set state objects and access them later.
-
-```java
-public class AccountTriggerHandler implements Triggers.BeforeInsert {
-    public Boolean shouldExecute(Triggers.Context context) {
-        return true;
-    }
-
-    public void beforeInsert(Triggers.Context context) {
-        context.states.put(AccountState.class, new AccountState());
-    }
-}
-```
-
-## 6. Tests
-
-### 6.1 Test with Mockup Data
+### 4.1 Test with Mockup Data
 
 The following method is private but `@TestVisible`, it can be used in test methods to supply mockup records for old and new lists. So we don't need to perform DMLs to trigger the handlers.
 
@@ -272,7 +249,7 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 }
 ```
 
-### 6.2 Test with Mockup Library
+### 4.2 Test with Mockup Library
 
 The following demo is using [Apex Test Kit](https://github.com/apexfarm/ApexTestKit) as a mockup data library. The behavior will be the same as the above example, but a sophisticated mock data library can also generate mockup data with read-only fields, such as formula fields, roll-up summary fields and system fields.
 
@@ -294,9 +271,9 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 }
 ```
 
-## 7. APIs
+## 5. APIs
 
-### 7.1 Trigger Handler Interfaces
+### 5.1 Trigger Handler Interfaces
 
 | Interface               | Method to Implement                                |
 | ----------------------- | -------------------------------------------------- |
@@ -309,7 +286,7 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 | Triggers.AfterDelete    | `void afterDelete(Triggers.Context context);`      |
 | Triggers.BeforeUndelete | `void afterUndelete(Triggers.Context context);`    |
 
-### 7.2 Triggers.Context
+### 5.2 Triggers.Context
 
 | Property/Method | Type                | Description                                                                                                                                                                                 |
 | --------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -319,7 +296,7 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 | context.next()  | void                | Call the next handler.                                                                                                                                                                      |
 | context.stop()  | void                | Stop execute any following handlers. A bit like the the stop in process builders.                                                                                                           |
 
-### 7.3 Triggers.Props
+### 5.3 Triggers.Props
 
 #### Properties
 
@@ -360,6 +337,6 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 | - `filterChangedAny(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAny(List<SObjectField> fields)` | List\<Id\> | Filter IDs of records have multiple fields changed during an update. Return IDs if any specified field is changed.        |
 | - `filterChangedAll(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAll(List<SObjectField> fields)` | List\<Id\> | Filter IDs of records have multiple fields changed during an update. Return IDs only if all specified fields are changed. |
 
-## 8. License
+## 6. License
 
 BSD 3-Clause License

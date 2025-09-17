@@ -4,8 +4,6 @@
 
 The Salesforce Apex trigger framework for clean, scalable, and maintainable automation.
 
-**Support:** If you find this library helpful, please consider sharing it on Twitter or recommending it to your friends or colleagues.
-
 ### Features
 
 1. Custom settings allow you to enable or disable triggers globally or for specific sObjects.
@@ -18,6 +16,8 @@ The Salesforce Apex trigger framework for clean, scalable, and maintainable auto
 | Sandbox               | <a target="_blank" href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04tGC000007TPrTYAW"><img src="docs/images/deploy-button.png"></a>  | ver 2.0 |
 
 ---
+
+**Support:** If you find this library helpful, please consider sharing it on Twitter or recommending it to your friends or colleagues.
 
 ### Translations
 

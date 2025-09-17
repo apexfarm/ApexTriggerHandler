@@ -4,8 +4,6 @@
 
 适用于 Salesforce 的 Apex 触发器框架，实现简洁、可扩展、易维护的自动化。
 
-**支持：** 如果你觉得这个库有帮助，请考虑在朋友圈上分享，或推荐给你的朋友或同事。
-
 ### 功能特性
 
 1. 自定义设置允许你全局或针对特定对象启用/禁用触发器。
@@ -18,6 +16,8 @@
 | 沙盒环境      | <a target="_blank" href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04tGC000007TPrTYAW"><img src="images/deploy-button.png"></a>  | ver 2.0 |
 
 ---
+
+**支持：** 如果你觉得这个库有帮助，请考虑在朋友圈上分享，或推荐给你的朋友或同事。
 
 ### 翻译
 

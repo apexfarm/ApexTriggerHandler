@@ -1,32 +1,53 @@
 # Apex Trigger Handler
 
-![](https://img.shields.io/badge/version-2.0.0-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-%3E95%25-brightgreen.svg)
+![](https://img.shields.io/badge/version-2.0.0-brightgreen.svg) ![](https://img.shields.io/badge/build-passing-brightgreen.svg) ![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
 
 The Salesforce Apex trigger framework for clean, scalable, and maintainable automation.
 
+**Support:** If you find this library helpful, please consider sharing it on Twitter or recommending it to your friends or colleagues.
+
 ### Features
 
-1. Custom settings to turn triggers on and off either globally or by specific sObjects.
-2. Custom registry to register handlers via settings instead of code.
-3. Control flow of handler execution with `context.next()`, `context.stop()`, and `context.skips`.
+1. Custom settings allow you to enable or disable triggers globally or for specific sObjects.
+2. Custom registry lets you register handlers through configuration rather than code.
+3. Fine-grained control over handler execution using `context.next()`, `context.stop()`, and `Triggers.skips`.
 
 | Environment           | Installation Link                                                                                                                                         | Version |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| Production, Developer | <a target="_blank" href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007CfgQAAS"><img src="docs/images/deploy-button.png"></a> | ver 2.0 |
-| Sandbox               | <a target="_blank" href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04t2v000007CfgQAAS"><img src="docs/images/deploy-button.png"></a>  | ver 2.0 |
+| Production, Developer | <a target="_blank" href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04tGC000007TPrTYAW"><img src="docs/images/deploy-button.png"></a> | ver 2.0 |
+| Sandbox               | <a target="_blank" href="https://test.salesforce.com/packaging/installPackage.apexp?p0=04tGC000007TPrTYAW"><img src="docs/images/deploy-button.png"></a>  | ver 2.0 |
 
-### v2.0 Release Notes
+---
 
-- Support custom metadata type settings to register trigger handlers. ([jump to section](#12-bind-with-handler-settings))
-- **Improve Consistency** (v1.2.1): Ids returned by `props.filterChangedAny` and `props.filterChangedAll` are now in the same Id orders of `props.newList`.
+### Translations
+
+- [简体中文](docs/README.zh-CN.md)
+
+### Release v2.0
+
+- Completely rewritten from v1.0. Retains the best features, removes unnecessary complexity, and introduces new capabilities.
 
 ## Table of Contents
 
 - [1. Setting](#1-setting)
+  - [1.1 Custom Setting](#11-custom-setting)
+  - [1.2 Custom Metadata](#12-custom-metadata)
 - [2. Handler](#2-handler)
+  - [2.1 Implementation](#21-implementation)
+  - [2.2 Registering with Registry](#22-registering-with-registry)
+  - [2.3 Registering with Apex](#23-registering-with-apex)
+  - [2.4 Props](#24-props)
+  - [2.5 States](#25-states)
 - [3. Execution Control](#3-execution-control)
+  - [3.1 Skipping Handlers](#31-skipping-handlers)
+  - [3.2 Handler Flow Control](#32-handler-flow-control)
+  - [3.3 Error Handling](#33-error-handling)
 - [4. Tests](#4-tests)
+  - [4.1 Manipulating Settings](#41-manipulating-settings)
+  - [4.2 Testing with Mock Data](#42-testing-with-mock-data)
 - [5. APIs](#5-apis)
+  - [5.1 Handler Interface](#51-handler-interface)
+  - [5.2 Trigger Context](#52-trigger-context)
 - [6. License](#6-license)
 
 ## 1. Setting
@@ -148,15 +169,15 @@ State classes must implement the `Triggers.State` interface.
 ```java
 public class CounterState implements Triggers.State {
     public Integer count { get; private set; }
-    
+
     public CounterState() {
         this.count = 0;
     }
-    
+
     public CounterState(Integer count) {
         this.count = count;
     }
-    
+
     public void increase() {
         this.count++;
     }
@@ -187,6 +208,14 @@ Triggers.skips.remove(AccountTriggerHandler.class);
 // Or simply clear all skipped handlers.
 Triggers.skips.clear();
 ```
+
+| Method                         | Return Type | Description                           |
+| ------------------------------ | ----------- | ------------------------------------- |
+| `add(type handlerType)`        | void        | Skip a handler.                       |
+| `add(List<type> handlerTypes)` | void        | Skip multiple handlers.               |
+| `contains(type handlerType)`   | Boolean     | Check if a handler is being skipped.  |
+| `remove(type handlerType)`     | void        | Restore a previously skipped handler. |
+| `clear()`                      | void        | Restore all skipped handlers.         |
 
 ### 3.2 Handler Flow Control
 
@@ -222,8 +251,7 @@ public class ErrorTriggerHandler implements Triggers.BeforeInsert, Triggers.Afte
             context.next();
         } catch (Exception ex) {
             // Handle exceptions from subsequent handlers here
-            // rethrow to abort the transaction
-            throw ex;
+            throw ex; // rethrow to revoke the transaction
         }
     }
 }
@@ -231,9 +259,36 @@ public class ErrorTriggerHandler implements Triggers.BeforeInsert, Triggers.Afte
 
 ## 4. Tests
 
-### 4.1 Test with Mockup Data
+### 4.1 Manipulating Settings
 
-The following method is private but `@TestVisible`, it can be used in test methods to supply mockup records for old and new lists. So we don't need to perform DMLs to trigger the handlers.
+Settings can be modified for testing purposes only, as the following two methods are private and marked with `@TestVisible`.
+
+```java
+// Use this method to override the global settings.
+// @param hasPriority
+// @param bypassTriggers
+// @param bypassSObjects
+Triggers.setSettings(true, true, 'Account\nContact\nOpportunity');
+
+// Use this method to override the handler registry.
+Triggers.setRegistry(
+    Account.SObjectType,
+    new List<TriggerHandlerRegistry__mdt>{
+        new TriggerHandlerRegistry__mdt(
+            TriggerEvent__c = 'ANY_EVENT',
+            HandlerClass__c = 'TriggersTest.AccountTriggerHandler01'
+            // The following fields are optional:
+            // SObject__c = 'Account',
+            // ExecutionOrder__c = 10,
+            // IsActive__c = true
+        )
+    }
+);
+```
+
+### 4.2 Testing with Mock Data
+
+The following method is private but marked as `@TestVisible`, allowing it to be used in test methods to provide mock records for the old and new lists. This eliminates the need to perform DML operations to trigger the handlers.
 
 ```java
 @isTest
@@ -249,97 +304,51 @@ static void test_AccountTriggerHandler_BeforeUpdate {
         new Account(Id = TriggersTest.getFakeId(Account.SObjectType, 3), Name = 'New Name 3')}
 
     Triggers.prepare(TriggerOperation.Before_Update, oldList, newList)
-        .beforeUpdate().bind(new MyAccountHandler()).execute();
-}
-```
-
-### 4.2 Test with Mockup Library
-
-The following demo is using [Apex Test Kit](https://github.com/apexfarm/ApexTestKit) as a mockup data library. The behavior will be the same as the above example, but a sophisticated mock data library can also generate mockup data with read-only fields, such as formula fields, roll-up summary fields and system fields.
-
-```java
-@isTest
-static void test_AccountTriggerHandler_BeforeUpdate {
-    // automatically generate fake IDs for oldList
-    List<SObject> oldList = ATK.prepare(Account.SObjectType, 3)
-        .field(Account.Name).index('Old Name {0}')
-        .mock().get(Account.SObjectType);
-
-    // IDs in oldList will be preserved in the newList
-    List<SObject> newList = ATK.prepare(Account.SObjectType, oldList)
-        .field(Account.Name).index('New Name {0}')
-        .mock().get(Account.SObjectType);
-
-    Triggers.prepare(TriggerOperation.Before_Update, oldList, newList)
-        .beforeUpdate().bind(new MyAccountHandler()).execute();
+        .beforeUpdate().bind('AccountTriggerHandler').execute();
 }
 ```
 
 ## 5. APIs
 
-### 5.1 Trigger Handler Interfaces
+### 5.1 Handler Interface
 
-| Interface               | Method to Implement                                |
-| ----------------------- | -------------------------------------------------- |
-| Triggers.Handler        | `Boolean shouldExecute(Triggers.Context context);` |
-| Triggers.BeforeInsert   | `void beforeInsert(Triggers.Context context);`     |
-| Triggers.AfterInsert    | `void afterInsert(Triggers.Context context);`      |
-| Triggers.BeforeUpdate   | `void beforeUpdate(Triggers.Context context);`     |
-| Triggers.AfterUpdate    | `void afterUpdate(Triggers.Context context);`      |
-| Triggers.BeforeDelete   | `void beforeDelete(Triggers.Context context);`     |
-| Triggers.AfterDelete    | `void afterDelete(Triggers.Context context);`      |
-| Triggers.BeforeUndelete | `void afterUndelete(Triggers.Context context);`    |
+| Interface                 | Method to Implement                             |
+| ------------------------- | ----------------------------------------------- |
+| `Triggers.BeforeInsert`   | `void beforeInsert(Triggers.Context context);`  |
+| `Triggers.AfterInsert`    | `void afterInsert(Triggers.Context context);`   |
+| `Triggers.BeforeUpdate`   | `void beforeUpdate(Triggers.Context context);`  |
+| `Triggers.AfterUpdate`    | `void afterUpdate(Triggers.Context context);`   |
+| `Triggers.BeforeDelete`   | `void beforeDelete(Triggers.Context context);`  |
+| `Triggers.AfterDelete`    | `void afterDelete(Triggers.Context context);`   |
+| `Triggers.BeforeUndelete` | `void afterUndelete(Triggers.Context context);` |
 
-### 5.2 Triggers.Context
-
-| Property/Method | Type                | Description                                                                                                                                                                                 |
-| --------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| context.props   | Triggers.Props      | All properties on Trigger are exposed by this class. In addition there are frequently used helper methods and a convinient sObjectType property, in case reflection is needed .             |
-| context.state   | Map<Object, Object> | A map provided for developers to pass any value down to other handlers.                                                                                                                     |
-| context.skips   | Triggers.Skips      | A set to store handlers to be skipped. Call the following methods to manage skips: `context.skips.add()`, `context.skips.remove()`, `context.skips.clear()` `context.skips.contains()` etc. |
-| context.next()  | void                | Call the next handler.                                                                                                                                                                      |
-| context.stop()  | void                | Stop execute any following handlers. A bit like the the stop in process builders.                                                                                                           |
-
-### 5.3 Triggers.Props
+### 5.2 Trigger Context
 
 #### Properties
 
-| Property      | Type               | Description              |
-| ------------- | ------------------ | ------------------------ |
-| sObjectType   | SObjectType        | The current SObjectType. |
-| isExecuting   | Boolean            | Trigger.isExecuting      |
-| isBefore      | Boolean            | Trigger.isBefore         |
-| isAfter       | Boolean            | Trigger.isAfter          |
-| isInsert      | Boolean            | Trigger.isInsert         |
-| isUpdate      | Boolean            | Trigger.isUpdate         |
-| isDelete      | Boolean            | Trigger.isDelete         |
-| isUndelete    | Boolean            | Trigger.isUndelete       |
-| oldList       | List\<SObject\>    | Trigger.old              |
-| oldMap        | Map\<Id, SObject\> | Trigger.oldMap           |
-| newList       | List\<SObject\>    | Trigger.new              |
-| newMap        | Map\<Id, SObject\> | Trigger.newMap           |
-| operationType | TriggerOperation   | Trigger.operationType    |
-| size          | Integer            | Trigger.size             |
+| Property                | Type               | Description              |
+| ----------------------- | ------------------ | ------------------------ |
+| `context.sObjectType`   | SObjectType        | The current SObjectType. |
+| `context.isExecuting`   | Boolean            | Trigger.isExecuting      |
+| `context.isBefore`      | Boolean            | Trigger.isBefore         |
+| `context.isAfter`       | Boolean            | Trigger.isAfter          |
+| `context.isInsert`      | Boolean            | Trigger.isInsert         |
+| `context.isUpdate`      | Boolean            | Trigger.isUpdate         |
+| `context.isDelete`      | Boolean            | Trigger.isDelete         |
+| `context.isUndelete`    | Boolean            | Trigger.isUndelete       |
+| `context.oldList`       | List\<SObject\>    | Trigger.old              |
+| `context.oldMap`        | Map\<Id, SObject\> | Trigger.oldMap           |
+| `context.newList`       | List\<SObject\>    | Trigger.new              |
+| `context.newMap`        | Map\<Id, SObject\> | Trigger.newMap           |
+| `context.operationType` | TriggerOperation   | Trigger.operationType    |
+| `context.size`          | Integer            | Trigger.size             |
 
 #### Methods
 
-**Note**: the following `isChanged` method has the same behavior has the `ISCHANGED` formula:
-
-> - This function returns `false` when evaluating any field on a newly created record.
-> - If a text field was previously blank, this function returns `true` when it contains any value.
-> - For number, percent, or currency fields, this function returns `true` when:
->   - The field was blank and now contains any value
->   - The field was zero and now is blank
->   - The field was zero and now contains any other value
-
-| Method                                                                                                                                                                                                     | Type       | Description                                                                                                               |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
-| - `isChanged(SObjectField field1)`                                                                                                                                                                         | Boolean    | Check if any record has a field changed during an update.                                                                 |
-| - `isChangedAny(SObjectField field1, SObjectField field2)`<br>- `isChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAny(List<SObjectField> fields)`               | Boolean    | Check if any record has multiple fields changed during an update. Return `true` if any specified field is changed.        |
-| - `isChangedAll(SObjectField field1, SObjectField field2)`<br>- `isChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br>- `isChangedAll(List<SObjectField> fields)`               | Boolean    | Check if any record has multiple fields changed during an update. Return `true` only if all specified fields are changed. |
-| - `filterChanged(SObjectField field1)`                                                                                                                                                                     | List\<Id\> | Filter IDs of records have a field changed during an update.                                                              |
-| - `filterChangedAny(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAny(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAny(List<SObjectField> fields)` | List\<Id\> | Filter IDs of records have multiple fields changed during an update. Return IDs if any specified field is changed.        |
-| - `filterChangedAll(SObjectField field1, SObjectField field2)`<br/>- `filterChangedAll(SObjectField field1, SObjectField field2, SObjectField field3)`<br/>- `filterChangedAll(List<SObjectField> fields)` | List\<Id\> | Filter IDs of records have multiple fields changed during an update. Return IDs only if all specified fields are changed. |
+| Method           | Return Type | Description                                                                       |
+| ---------------- | ----------- | --------------------------------------------------------------------------------- |
+| `context.next()` | void        | Call the next handler.                                                            |
+| `context.stop()` | void        | Stop execute any following handlers. A bit like the the stop in process builders. |
 
 ## 6. License
 

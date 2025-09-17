@@ -57,6 +57,196 @@ public class TriggersTest {
         )
     };
 
+    // =====================
+    // #region 100% Coverage
+
+    @isTest
+    static void test100Percent_prepare_vanilla() {
+        Triggers.prepare()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .beforeInsert()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .beforeUpdate()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .beforeDelete()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .afterInsert()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .afterUpdate()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .afterDelete()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .afterUndelete()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .execute();
+
+        Assert.isFalse(Triggers.settings.bypassSObject(null));
+        Triggers.setRegistry(null, null);
+
+        Triggers.setSettings(false, true, null);
+        Triggers.prepare()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .beforeInsert()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .execute();
+    }
+
+    @isTest
+    static void test100Percent_prepare_mockup() {
+        Exception exp;
+        try {
+            Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, null).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.AFTER_INSERT, null, null).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.BEFORE_UPDATE, null, null).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.AFTER_UPDATE, null, null).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.BEFORE_UPDATE, null, testAccounts).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.AFTER_UPDATE, null, testAccounts).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.BEFORE_DELETE, null, null).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.AFTER_DELETE, null, null).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.AFTER_UNDELETE, null, null).execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+    }
+
+    @isTest
+    static void test100Percent_skips() {
+        Type handlerType = null;
+        List<Type> handlerTyps = null;
+        Triggers.skips.add(handlerType);
+        Triggers.skips.add(handlerTyps);
+
+        Exception exp;
+        try {
+            Triggers.skips.add(TriggersTest.class);
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+    }
+
+    @isTest
+    static void test100Percent_states() {
+        Type stateType = null;
+        Triggers.states.put(stateType, null);
+        Triggers.states.get(stateType);
+
+        Exception exp;
+        try {
+            Triggers.states.get(TriggersTest.class);
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+    }
+
+    @isTest
+    static void test100Percent_bind() {
+        Type handlerType = null;
+        List<Type> handlerTyps = null;
+        Triggers.prepare(TriggerOperation.AFTER_DELETE, testAccounts, null)
+            .bind(handlerType)
+            .beforeInsert()
+            .bind(TriggersTest.AccountTriggerHandler01.class)
+            .bind(handlerTyps)
+            .afterDelete()
+            .bind(handlerTyps)
+            .execute();
+
+        String handlerName = null;
+        List<String> handlerNames = null;
+        Triggers.prepare(TriggerOperation.AFTER_DELETE, testAccounts, null)
+            .bind(handlerName)
+            .beforeInsert()
+            .bind('TriggersTest.AccountTriggerHandler01')
+            .bind(handlerNames)
+            .afterDelete()
+            .bind(handlerNames)
+            .execute();
+
+        Exception exp;
+        try {
+            Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts).bind('TriggersTest').execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+
+        try {
+            Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
+                .bind('TriggersTest_XXX_YYY_ZZZ')
+                .execute();
+        } catch (Exception ex) {
+            exp = ex;
+        }
+        Assert.isNotNull(exp);
+        exp = null;
+    }
+
+    // #endregion
+    // =====================
+
     // ==================
     // #region 1. Setting
 
@@ -102,7 +292,7 @@ public class TriggersTest {
             }
         );
 
-        List<String> handlerName = Triggers.loader.load(Account.SObjectType, 'BEFORE_INSERT');
+        List<String> handlerName = Triggers.loader.load(Account.SObjectType, TriggerOperation.BEFORE_INSERT);
         Assert.areEqual(2, handlerName.size());
         Assert.areEqual('TriggersTest.AccountTriggerHandler01', handlerName[0]);
         Assert.areEqual('TriggersTest.AccountTriggerHandler01', handlerName[1]);
@@ -140,42 +330,42 @@ public class TriggersTest {
             .execute();
         Assert.isFalse(Triggers.states.contains(CounterState.class));
 
-        Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
+        Triggers.prepare(TriggerOperation.AFTER_INSERT, null, testAccounts)
             .bind('TriggersTest.AccountTriggerHandler01')
             .afterInsert()
             .bind('TriggersTest.AccountTriggerHandler01')
             .execute();
         Assert.isFalse(Triggers.states.contains(CounterState.class));
 
-        Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
+        Triggers.prepare(TriggerOperation.BEFORE_UPDATE, null, testAccounts)
             .bind('TriggersTest.AccountTriggerHandler01')
             .beforeUpdate()
             .bind('TriggersTest.AccountTriggerHandler01')
             .execute();
         Assert.isFalse(Triggers.states.contains(CounterState.class));
 
-        Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
+        Triggers.prepare(TriggerOperation.AFTER_UPDATE, null, testAccounts)
             .bind('TriggersTest.AccountTriggerHandler01')
             .afterUpdate()
             .bind('TriggersTest.AccountTriggerHandler01')
             .execute();
         Assert.isFalse(Triggers.states.contains(CounterState.class));
 
-        Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
+        Triggers.prepare(TriggerOperation.BEFORE_DELETE, testAccounts, null)
             .bind('TriggersTest.AccountTriggerHandler01')
             .beforeDelete()
             .bind('TriggersTest.AccountTriggerHandler01')
             .execute();
         Assert.isFalse(Triggers.states.contains(CounterState.class));
 
-        Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
+        Triggers.prepare(TriggerOperation.AFTER_DELETE, testAccounts, null)
             .bind('TriggersTest.AccountTriggerHandler01')
             .afterDelete()
             .bind('TriggersTest.AccountTriggerHandler01')
             .execute();
         Assert.isFalse(Triggers.states.contains(CounterState.class));
 
-        Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
+        Triggers.prepare(TriggerOperation.AFTER_UNDELETE, null, testAccounts)
             .bind('TriggersTest.AccountTriggerHandler01')
             .afterUndelete()
             .bind('TriggersTest.AccountTriggerHandler01')
@@ -585,14 +775,12 @@ public class TriggersTest {
     static void testExecutionControl_errorHandling() {
         try {
             Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
-                .bind('TriggersTest.AccountTriggerHandler01')
-                .bind('TriggersTest.ErrorTriggerHandler')
-                .bind('TriggersTest.ErrorTriggerHandler')
-                .bind('TriggersTest.AccountTriggerHandler02')
+                .bind('TriggersTest.AccountTriggerHandler01') // +1
+                .bind('TriggersTest.ErrorTriggerHandler') // +1
+                .bind('TriggersTest.ErrorTriggerHandler') // +1
+                .bind('TriggersTest.AccountTriggerHandler02') // +1
                 .bind('TriggersTest.ExceptionTriggerHandler')
-                .bind('TriggersTest.ErrorTriggerHandler')
                 .bind('TriggersTest.AccountTriggerHandler01')
-                .bind('TriggersTest.ExceptionTriggerHandler')
                 .bind('TriggersTest.AccountTriggerHandler02')
                 .execute();
         } catch (Exception ex) {
@@ -600,13 +788,28 @@ public class TriggersTest {
         }
         CounterState state = (CounterState) Triggers.states.get(CounterState.class);
         Assert.areEqual(4, state.count);
+
+        Triggers.states.clear();
+        try {
+            Triggers.prepare(TriggerOperation.BEFORE_INSERT, null, testAccounts)
+                .bind('TriggersTest.AccountTriggerHandler01') // +1
+                .bind('TriggersTest.AccountTriggerHandler02') // +1
+                .bind('TriggersTest.ExceptionTriggerHandler')
+                .bind('TriggersTest.AccountTriggerHandler01')
+                .bind('TriggersTest.AccountTriggerHandler02')
+                .execute();
+        } catch (Exception ex) {
+            // do nothing
+        }
+        state = (CounterState) Triggers.states.get(CounterState.class);
+        Assert.areEqual(2, state.count);
     }
 
     // #endregion
     // ============================
 
-    // =====================
-    // #region Test Handlers
+    // ==========================
+    // #region Supporting Classes
 
     public class CounterState implements Triggers.State {
         public Integer count { get; private set; }
@@ -710,11 +913,10 @@ public class TriggersTest {
         }
 
         private void execute(Triggers.Context context) {
-            System.debug('throw exception');
-            throw new IllegalArgumentException();
+            Integer a = 1 / 0; // ! System.MathException: Divide by 0
         }
     }
 
     // #endregion
-    // =====================
+    // ==========================
 }

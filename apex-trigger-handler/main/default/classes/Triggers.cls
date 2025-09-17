@@ -120,8 +120,14 @@ public class Triggers {
     private class LoaderImpl implements Loader {
         private Map<String, List<TriggerHandlerRegistry__mdt>> registry = new Map<String, List<TriggerHandlerRegistry__mdt>>();
 
-        public List<String> load(SObjectType sobjectType, String operationTypeName) {
+        public List<String> load(SObjectType sobjectType, TriggerOperation operationType) {
+            List<String> handlerNames = new List<String>();
+            if (sobjectType == null || operationType == null) {
+                return handlerNames;
+            }
+
             String sobjectName = String.valueOf(sobjectType);
+            String operationTypeName = operationType.name();
             if (!registry.containsKey(sobjectName)) {
                 List<TriggerHandlerRegistry__mdt> registredHandlers = [
                     SELECT HandlerClass__c, TriggerEvent__c
@@ -132,7 +138,6 @@ public class Triggers {
                 registry.put(sobjectName, registredHandlers);
             }
 
-            List<String> handlerNames = new List<String>();
             for (TriggerHandlerRegistry__mdt registeredHandler : registry.get(sobjectName)) {
                 if (
                     registeredHandler.TriggerEvent__c == operationTypeName ||
@@ -180,30 +185,23 @@ public class Triggers {
             return new NullManager(context);
         }
 
-        Exception newListEmptyEx = new IllegalArgumentException(
-            'New list cannot be null for ' + operationType + ' event.'
-        );
-        Exception oldListEmptyEx = new IllegalArgumentException(
-            'Old list cannot be null for ' + operationType + ' event.'
-        );
-
         switch on operationType {
             when BEFORE_INSERT, AFTER_INSERT, AFTER_UNDELETE {
                 if (newList == null) {
-                    throw newListEmptyEx;
+                    throw new IllegalArgumentException('New list cannot be null for ' + operationType + ' event.');
                 }
             }
             when BEFORE_UPDATE, AFTER_UPDATE {
                 if (newList == null) {
-                    throw newListEmptyEx;
+                    throw new IllegalArgumentException('New list cannot be null for ' + operationType + ' event.');
                 }
                 if (oldList == null) {
-                    throw oldListEmptyEx;
+                    throw new IllegalArgumentException('Old list cannot be null for ' + operationType + ' event.');
                 }
             }
             when BEFORE_DELETE, AFTER_DELETE {
                 if (oldList == null) {
-                    throw oldListEmptyEx;
+                    throw new IllegalArgumentException('Old list cannot be null for ' + operationType + ' event.');
                 }
             }
         }
@@ -260,14 +258,8 @@ public class Triggers {
         }
 
         private Manager load() {
-            if (!canBind) {
-                return this;
-            }
-
-            List<String> handlerNames = loader.load(this.context.sObjectType, this.context.operationType.name());
-
+            List<String> handlerNames = loader.load(this.context.sObjectType, this.context.operationType);
             this.bind(handlerNames);
-
             return this;
         }
 
@@ -460,9 +452,14 @@ public class Triggers {
         }
 
         public void next() {
-            while (hasNext()) {
-                System.debug('next: ' + this.handlerTypes[this.currIndex + 1]);
-                runNext();
+            try {
+                while (hasNext()) {
+                    System.debug('next: ' + this.handlerTypes[this.currIndex + 1]);
+                    runNext();
+                }
+            } catch (Exception ex) {
+                stop();
+                throw ex;
             }
         }
 
@@ -683,7 +680,9 @@ public class Triggers {
                 return;
             }
 
-            this.skippedHandlers.addAll(handlerTypes);
+            for (Type handlerType : handlerTypes) {
+                this.add(handlerType);
+            }
         }
 
         public void remove(type handlerType) {
@@ -709,10 +708,6 @@ public class Triggers {
         public void put(Type stateType, State state) {
             if (stateType == null || state == null) {
                 return;
-            }
-
-            if (!State.class.isAssignableFrom(stateType)) {
-                throw new IllegalArgumentException('Type [' + stateType + '] is not a State type.');
             }
 
             this.states.put(stateType, state);
@@ -749,7 +744,7 @@ public class Triggers {
     //===================
     // #region interfaces
     private interface Loader {
-        List<String> load(SObjectType sobjectType, String triggerEventName);
+        List<String> load(SObjectType sobjectType, TriggerOperation triggerEventName);
         void put(SObjectType sobjectType, List<TriggerHandlerRegistry__mdt> records);
     }
 

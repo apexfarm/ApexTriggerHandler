@@ -54,7 +54,7 @@
 
 ### 1.1 自定义设置
 
-<p align="center"><img src="images/custom-settings.png" width=600></p>
+<p align="center"><img src="images/custom-settings.png" width=530></p>
 
 `Registry Has Priority` 设置决定通过自定义元数据类型注册的 Handler 是否优先于直接在 Apex 代码中注册的 Handler。有关 `Bypass` 标志的更多信息，请参见下表：
 

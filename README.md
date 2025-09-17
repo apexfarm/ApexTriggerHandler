@@ -54,7 +54,7 @@ Completely rewritten from v1.0. Retains the best features, removes unnecessary c
 
 ### 1.1 Custom Setting
 
-<p align="center"><img src="docs/images/custom-settings.png" width=600></p>
+<p align="center"><img src="docs/images/custom-settings.png" width=530></p>
 
 The `Registry Has Priority` setting determines whether handlers registered via custom metadata types take precedence over those registered directly in Apex code. For more details about bypass flags, see the table below:
 

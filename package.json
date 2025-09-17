@@ -4,13 +4,13 @@
   "version": "1.0.0",
   "description": "Apex Trigger Handler",
   "scripts": {
-    "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
-    "prettier:verify": "prettier --check \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
+    "prettier": "prettier --write \"**/*.{cls,md,trigger,xml}\"",
+    "prettier:verify": "prettier --check \"**/*.{cls,md,trigger,xml}\"",
     "precommit": "lint-staged"
   },
   "devDependencies": {
     "@prettier/plugin-xml": "^3.4.1",
-    "lint-staged": "^15.5.1",
+    "lint-staged": "^16.1.2",
     "prettier": "^3.5.3",
     "prettier-plugin-apex": "^2.2.6"
   },

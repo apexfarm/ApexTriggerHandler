@@ -31,27 +31,24 @@
  */
 
 public class Triggers {
-    public static final SkipsImpl skips = new SkipsImpl();
-    public static final StatesImpl states = new StatesImpl();
+    public static final Skips skips = new SkipsImpl();
+    public static final States states = new StatesImpl();
+    @TestVisible
+    private static final Loader loader = new LoaderImpl();
+    @TestVisible
     private static final Settings settings = new Settings();
-    private static final Map<String, Type> handlerTypeCache = new Map<String, Type>();
-
-    private static Type getHandlerType(String className) {
-        className = className.trim().toUpperCase();
-        if (!handlerTypeCache.containsKey(className)) {
-            Type handlerType = Type.forName(className);
-            if (handlerType == null) {
-                throw new TypeException('Handler class [' + className + '] cannot be found.');
-            }
-            handlerTypeCache.put(className, handlerType);
-        }
-        return handlerTypeCache.get(className);
-    }
+    private static Map<String, Type> handlerTypeCache = new Map<String, Type>();
 
     // ===============
     // #region Settings
 
-    public static void setSettings(Boolean hasPriority, Boolean bypassTriggers, String bypassSObjects) {
+    @TestVisible
+    private static void setRegistry(SObjectType sObjectType, List<TriggerHandlerRegistry__mdt> records) {
+        loader.put(sObjectType, records);
+    }
+
+    @TestVisible
+    private static void setSettings(Boolean hasPriority, Boolean bypassTriggers, String bypassSObjects) {
         settings.record.RegistryHasPriority__c = hasPriority;
         settings.record.BypassTriggers__c = bypassTriggers;
         settings.record.BypassSObjects__c = bypassSObjects;
@@ -59,7 +56,7 @@ public class Triggers {
     }
 
     private class Settings {
-        private TriggerHandlerSettings__c record {
+        public TriggerHandlerSettings__c record {
             get {
                 if (record == null) {
                     record = TriggerHandlerSettings__c.getInstance();
@@ -89,7 +86,7 @@ public class Triggers {
             }
         }
 
-        private Set<String> bypassSObjects {
+        public Set<String> bypassSObjects {
             get {
                 if (bypassSObjects == null) {
                     bypassSObjects = new Set<String>();
@@ -118,45 +115,45 @@ public class Triggers {
     // #endregion
     // ===============
 
-    // ==============
+    // ===============
     // #region Loader
+    private class LoaderImpl implements Loader {
+        private Map<String, List<TriggerHandlerRegistry__mdt>> registry = new Map<String, List<TriggerHandlerRegistry__mdt>>();
 
-    @TestVisible
-    private static Loader LOADER {
-        get {
-            if (LOADER == null) {
-                LOADER = new TriggersLoader();
+        public List<String> load(SObjectType sobjectType, String operationTypeName) {
+            String sobjectName = String.valueOf(sobjectType);
+            if (!registry.containsKey(sobjectName)) {
+                List<TriggerHandlerRegistry__mdt> registredHandlers = [
+                    SELECT HandlerClass__c, TriggerEvent__c
+                    FROM TriggerHandlerRegistry__mdt
+                    WHERE IsActive__c = TRUE AND SObject__c = :sobjectName
+                    ORDER BY ExecutionOrder__c
+                ];
+                registry.put(sobjectName, registredHandlers);
             }
-            return LOADER;
+
+            List<String> handlerNames = new List<String>();
+            for (TriggerHandlerRegistry__mdt registeredHandler : registry.get(sobjectName)) {
+                if (
+                    registeredHandler.TriggerEvent__c == operationTypeName ||
+                    registeredHandler.TriggerEvent__c == 'ANY_EVENT'
+                ) {
+                    handlerNames.add(registeredHandler.HandlerClass__c);
+                }
+            }
+            return handlerNames;
         }
-        set;
-    }
 
-    public class TriggersLoader implements Loader {
-        public List<Type> load(String sobjectName, String triggerEventName) {
-            List<Type> handlerTypes = new List<Type>();
-
-            List<TriggerHandlerRegistry__mdt> registredHandlers = [
-                SELECT HandlerClass__c
-                FROM TriggerHandlerRegistry__mdt
-                WHERE
-                    IsActive__c = TRUE
-                    AND SObject__c = :sobjectName
-                    AND (TriggerEvent__c = :triggerEventName
-                    OR TriggerEvent__c = 'ANY_EVENT')
-                ORDER BY ExecutionOrder__c
-            ];
-
-            for (TriggerHandlerRegistry__mdt setting : registredHandlers) {
-                handlerTypes.add(getHandlerType(setting.HandlerClass__c));
+        public void put(SObjectType sobjectType, List<TriggerHandlerRegistry__mdt> records) {
+            if (sobjectType == null || records == null) {
+                return;
             }
-
-            return handlerTypes;
+            this.registry.put(String.valueOf(sobjectType), records);
         }
     }
 
     // #endregion
-    // ==============
+    // ===============
 
     // ===============
     // #region Manager
@@ -183,6 +180,34 @@ public class Triggers {
             return new NullManager(context);
         }
 
+        Exception newListEmptyEx = new IllegalArgumentException(
+            'New list cannot be null for ' + operationType + ' event.'
+        );
+        Exception oldListEmptyEx = new IllegalArgumentException(
+            'Old list cannot be null for ' + operationType + ' event.'
+        );
+
+        switch on operationType {
+            when BEFORE_INSERT, AFTER_INSERT, AFTER_UNDELETE {
+                if (newList == null) {
+                    throw newListEmptyEx;
+                }
+            }
+            when BEFORE_UPDATE, AFTER_UPDATE {
+                if (newList == null) {
+                    throw newListEmptyEx;
+                }
+                if (oldList == null) {
+                    throw oldListEmptyEx;
+                }
+            }
+            when BEFORE_DELETE, AFTER_DELETE {
+                if (oldList == null) {
+                    throw oldListEmptyEx;
+                }
+            }
+        }
+
         return new ManagerImpl(context);
     }
 
@@ -194,7 +219,7 @@ public class Triggers {
 
         private ManagerImpl(Context context) {
             this.context = context;
-            if (!settings.registryHasPriority) {
+            if (settings.registryHasPriority) {
                 this.load();
             }
         }
@@ -239,12 +264,9 @@ public class Triggers {
                 return this;
             }
 
-            List<Type> handlerTypes = LOADER.load(
-                String.valueOf(this.context.sObjectType),
-                this.context.operationType.name()
-            );
+            List<String> handlerNames = loader.load(this.context.sObjectType, this.context.operationType.name());
 
-            this.bind(handlerTypes);
+            this.bind(handlerNames);
 
             return this;
         }
@@ -339,8 +361,20 @@ public class Triggers {
             return this.bind(handlerType);
         }
 
+        private Type getHandlerType(String handlerName) {
+            handlerName = handlerName.trim().toUpperCase();
+            if (!handlerTypeCache.containsKey(handlerName)) {
+                Type handlerType = Type.forName(handlerName);
+                if (handlerType == null) {
+                    throw new TypeException('Handler class [' + handlerName + '] cannot be found.');
+                }
+                handlerTypeCache.put(handlerName, handlerType);
+            }
+            return handlerTypeCache.get(handlerName);
+        }
+
         public void execute() {
-            if (settings.registryHasPriority) {
+            if (!settings.registryHasPriority) {
                 this.canBind = true;
                 this.load();
                 this.canBind = false;
@@ -408,6 +442,7 @@ public class Triggers {
 
     // ===============
     // #region Context
+
     public class Context extends Props implements IContext {
         private final List<Type> handlerTypes = new List<Type>();
         private Integer currIndex = -1;
@@ -426,6 +461,7 @@ public class Triggers {
 
         public void next() {
             while (hasNext()) {
+                System.debug('next: ' + this.handlerTypes[this.currIndex + 1]);
                 runNext();
             }
         }
@@ -433,6 +469,7 @@ public class Triggers {
         private void execute() {
             reset();
             while (hasNext()) {
+                System.debug('execute: ' + this.handlerTypes[this.currIndex + 1]);
                 runNext();
             }
         }
@@ -641,6 +678,14 @@ public class Triggers {
             this.skippedHandlers.add(handlerType);
         }
 
+        public void add(List<type> handlerTypes) {
+            if (handlerTypes == null) {
+                return;
+            }
+
+            this.skippedHandlers.addAll(handlerTypes);
+        }
+
         public void remove(type handlerType) {
             this.skippedHandlers.remove(handlerType);
         }
@@ -703,16 +748,17 @@ public class Triggers {
 
     //===================
     // #region interfaces
-    public interface Loader {
-        List<Type> load(String sobjectName, String triggerEventName);
+    private interface Loader {
+        List<String> load(SObjectType sobjectType, String triggerEventName);
+        void put(SObjectType sobjectType, List<TriggerHandlerRegistry__mdt> records);
     }
 
-    public interface IContext {
+    private interface IContext {
         void stop();
         void next();
     }
 
-    public interface IProps {
+    private interface IProps {
     }
 
     public interface States {
@@ -728,6 +774,7 @@ public class Triggers {
 
     public interface Skips {
         void add(type handlerType);
+        void add(List<type> handlerTypes);
         Boolean contains(type handlerType);
         void remove(type handlerType);
         void clear();
@@ -750,7 +797,7 @@ public class Triggers {
         void execute();
     }
 
-    public interface Handler {
+    private interface Handler {
     }
 
     public interface BeforeInsert extends Handler {

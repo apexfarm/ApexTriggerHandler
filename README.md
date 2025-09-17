@@ -96,8 +96,8 @@ trigger AccountTrigger on Account (before update, after update) {
         .bind(AccountTriggerHandler1.class) // handlers bound to any event
         .bind('AccountTriggerHandler2')
         .beforeUpdate()                     // handlers bound to a specific event
-            .bind(AccountTriggerHandler3.class)
-            .bind('AccountTriggerHandler4')
+        .bind(AccountTriggerHandler3.class)
+        .bind('AccountTriggerHandler4')
         .execute();
 }
 ```
@@ -106,7 +106,7 @@ trigger AccountTrigger on Account (before update, after update) {
 
 ### 2.4 Props
 
-All static variables from the `Trigger` class are now accessible via the `context` object. Always use `context` to access trigger properties, such as `context.oldList` and `context.newList`.
+All static properties from the `Trigger` class are now accessible via the `context` object. Always use `context` to access trigger properties, such as `context.oldList` and `context.newList`.
 
 ```java
 public class AccountTriggerHandler implements Triggers.BeforeInsert {
@@ -149,7 +149,9 @@ State classes must implement the `Triggers.State` interface.
 public class CounterState implements Triggers.State {
     public Integer count { get; private set; }
     
-    public CounterState() {}
+    public CounterState() {
+        this.count = 0;
+    }
     
     public CounterState(Integer count) {
         this.count = count;
@@ -220,6 +222,8 @@ public class ErrorTriggerHandler implements Triggers.BeforeInsert, Triggers.Afte
             context.next();
         } catch (Exception ex) {
             // Handle exceptions from subsequent handlers here
+            // rethrow to abort the transaction
+            throw ex;
         }
     }
 }

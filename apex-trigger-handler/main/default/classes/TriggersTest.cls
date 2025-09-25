@@ -822,7 +822,7 @@ public class TriggersTest {
             this.count = count;
         }
 
-        public void increase() {
+        public void increment() {
             this.count++;
         }
     }
@@ -830,7 +830,7 @@ public class TriggersTest {
     public class AccountTriggerHandler01 implements Triggers.BeforeInsert, Triggers.AfterInsert, Triggers.BeforeUpdate, Triggers.AfterUpdate, Triggers.BeforeDelete, Triggers.AfterDelete, Triggers.AfterUndelete {
         private void execute(Triggers.Context context) {
             CounterState state = (CounterState) Triggers.states.get(CounterState.class);
-            state.increase();
+            state.increment();
         }
 
         public void beforeInsert(Triggers.Context context) {
@@ -865,7 +865,7 @@ public class TriggersTest {
     public class AccountTriggerHandler02 implements Triggers.BeforeInsert {
         private void execute(Triggers.Context context) {
             CounterState state = (CounterState) Triggers.states.get(CounterState.class);
-            state.increase();
+            state.increment();
         }
 
         public void beforeInsert(Triggers.Context context) {
@@ -897,7 +897,7 @@ public class TriggersTest {
                 context.next();
             } catch (Exception ex) {
                 CounterState state = (CounterState) Triggers.states.get(CounterState.class);
-                state.increase();
+                state.increment();
                 throw ex;
             }
         }

@@ -32,23 +32,25 @@ Completely rewritten from v1.0. Retains the best features, removes unnecessary c
 - [1. Setting](#1-setting)
   - [1.1 Custom Setting](#11-custom-setting)
   - [1.2 Custom Metadata](#12-custom-metadata)
-- [2. Handler](#2-handler)
+- [2. Handler Registration](#2-handler-registration)
   - [2.1 Implementation](#21-implementation)
   - [2.2 Registering with Registry](#22-registering-with-registry)
   - [2.3 Registering with Apex](#23-registering-with-apex)
-  - [2.4 Props](#24-props)
-  - [2.5 States](#25-states)
-- [3. Execution Control](#3-execution-control)
-  - [3.1 Skipping Handlers](#31-skipping-handlers)
-  - [3.2 Handler Flow Control](#32-handler-flow-control)
-  - [3.3 Error Handling](#33-error-handling)
-- [4. Tests](#4-tests)
-  - [4.1 Manipulating Settings](#41-manipulating-settings)
-  - [4.2 Testing with Mock Data](#42-testing-with-mock-data)
-- [5. APIs](#5-apis)
-  - [5.1 Handler Interface](#51-handler-interface)
-  - [5.2 Trigger Context](#52-trigger-context)
-- [6. License](#6-license)
+- [3. Handler Usage](#3-handler-usage)
+  - [3.1 Props](#31-props)
+  - [3.2 States](#32-states)
+  - [3.3 Detecting Field Changes](#33-detecting-field-changes)
+- [4. Execution Control](#4-execution-control)
+  - [4.1 Skipping Handlers](#41-skipping-handlers)
+  - [4.2 Handler Flow Control](#42-handler-flow-control)
+  - [4.3 Error Handling](#43-error-handling)
+- [5. Tests](#5-tests)
+  - [5.1 Manipulating Settings](#51-manipulating-settings)
+  - [5.2 Testing with Mock Data](#52-testing-with-mock-data)
+- [6. APIs](#6-apis)
+  - [6.1 Handler Interface](#61-handler-interface)
+  - [6.2 Trigger Context](#62-trigger-context)
+- [7. License](#7-license)
 
 ## 1. Setting
 
@@ -76,7 +78,7 @@ The `Registry Has Priority` setting determines whether handlers registered via c
 | Execution Order | Number    | **Required.** Determines the sequence in which handlers are executed.                                             |
 | Is Active       | Checkbox  | Indicates whether the handler is enabled or disabled.                                                             |
 
-## 2. Handler
+## 2. Handler Registration
 
 ### 2.1 Implementation
 
@@ -125,7 +127,9 @@ trigger AccountTrigger on Account (before update, after update) {
 
 **Note:** You can register trigger handlers using both custom metadata and Apex code at the same time. By default, handlers registered in Apex code have higher priority. To give priority to handlers registered via custom metadata, enable the `Registry Has Priority` setting as described above.
 
-### 2.4 Props
+## 3. Handler Usage
+
+### 3.1 Props
 
 All static properties from the `Trigger` class are now accessible via the `context` object. Always use `context` to access trigger properties, such as `context.oldList` and `context.newList`.
 
@@ -141,7 +145,7 @@ public class AccountTriggerHandler implements Triggers.BeforeInsert {
 }
 ```
 
-### 2.5 States
+### 3.2 States
 
 Use `Triggers.states` to manage state objects. This is a singleton, meaning it is shared across all triggers within the same transaction. State classes are automatically initialized the first time they are accessed.
 
@@ -150,7 +154,7 @@ public class AccountTriggerHandler implements Triggers.BeforeInsert {
     public void beforeInsert(Triggers.Context context) {
         // Retrieve and update a state instance as needed.
         CounterState counter = (CounterState) Triggers.states.get(CounterState.class);
-        counter.increase();
+        counter.increment();
     }
 }
 ```
@@ -178,7 +182,7 @@ public class CounterState implements Triggers.State {
         this.count = count;
     }
 
-    public void increase() {
+    public void increment() {
         this.count++;
     }
 }
@@ -193,9 +197,35 @@ Triggers.states.remove(CounterState.class);
 Triggers.states.clear();
 ```
 
-## 3. Execution Control
+### 3.3 Detecting Field Changes
 
-### 3.1 Skipping Handlers
+It is a common requirement to determine whether specific fields have changed between the old and new lists in a trigger context. You can use [Apex LINQ](https://github.com/apexfarm/ApexLINQ) to simplify this process.
+
+```java
+public class AccountTriggerHandler implements Triggers.BeforeUpdate {
+    public void beforeUpdate(Triggers.Context context) {
+        Q.Differ differ = new AccountDiffer();
+        List<Account> changedAccounts = (List<Account>) Q.of(context.newList)
+            .toDiff(differ, context.oldList);
+        if (changedAccounts.isEmpty()) {
+            return; // No relevant changes detected.
+        }
+        // Implement your business logic here.
+    }
+
+    public class AccountDiffer implements Q.Differ {
+        public Boolean changed(Object fromRecord, Object toRecord) {
+            Account fromAcc = (Account) fromRecord;
+            Account toAcc = (Account) toRecord;
+            return (Double) fromAcc.AnnualRevenue != (Double) toAcc.AnnualRevenue;
+        }
+    }
+}
+```
+
+## 4. Execution Control
+
+### 4.1 Skipping Handlers
 
 You can skip specific handlers in your Apex code as shown below:
 
@@ -217,7 +247,7 @@ Triggers.skips.clear();
 | `remove(type handlerType)`     | void        | Restore a previously skipped handler. |
 | `clear()`                      | void        | Restore all skipped handlers.         |
 
-### 3.2 Handler Flow Control
+### 4.2 Handler Flow Control
 
 ```java
 public class AccountTriggerHandler implements Triggers.BeforeInsert {
@@ -232,7 +262,7 @@ public class AccountTriggerHandler implements Triggers.BeforeInsert {
 }
 ```
 
-### 3.3 Error Handling
+### 4.3 Error Handling
 
 You can centralize exception handling for all subsequent handlers by implementing a dedicated error handler. This ensures that any exceptions thrown by handlers executed after `context.next()` are caught and managed in a single location. For example:
 
@@ -257,9 +287,9 @@ public class ErrorTriggerHandler implements Triggers.BeforeInsert, Triggers.Afte
 }
 ```
 
-## 4. Tests
+## 5. Tests
 
-### 4.1 Manipulating Settings
+### 5.1 Manipulating Settings
 
 Settings can be modified for testing purposes only, as the following two methods are private and marked with `@TestVisible`.
 
@@ -286,7 +316,7 @@ Triggers.setRegistry(
 );
 ```
 
-### 4.2 Testing with Mock Data
+### 5.2 Testing with Mock Data
 
 The following method is private but marked as `@TestVisible`, allowing it to be used in test methods to provide mock records for the old and new lists. This eliminates the need to perform DML operations to trigger the handlers.
 
@@ -308,9 +338,9 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 }
 ```
 
-## 5. APIs
+## 6. APIs
 
-### 5.1 Handler Interface
+### 6.1 Handler Interface
 
 | Interface                 | Method to Implement                             |
 | ------------------------- | ----------------------------------------------- |
@@ -322,7 +352,7 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 | `Triggers.AfterDelete`    | `void afterDelete(Triggers.Context context);`   |
 | `Triggers.BeforeUndelete` | `void afterUndelete(Triggers.Context context);` |
 
-### 5.2 Trigger Context
+### 6.2 Trigger Context
 
 #### Properties
 
@@ -350,6 +380,6 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 | `context.next()` | void        | Call the next handler.                                                            |
 | `context.stop()` | void        | Stop execute any following handlers. A bit like the the stop in process builders. |
 
-## 6. License
+## 7. License
 
 BSD 3-Clause License

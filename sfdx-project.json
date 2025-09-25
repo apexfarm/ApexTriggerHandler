@@ -4,7 +4,8 @@
       "path": "apex-trigger-handler",
       "package": "ApexTriggerHandler",
       "versionName": "ver 2.0.0",
-      "versionNumber": "2.0.0.NEXT"
+      "versionNumber": "2.0.0.NEXT",
+      "default": true
     }
   ],
   "name": "ApexTriggerHandler",

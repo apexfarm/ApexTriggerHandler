@@ -32,23 +32,25 @@
 - [1. 设置](#1-设置)
   - [1.1 自定义设置](#11-自定义设置)
   - [1.2 自定义元数据](#12-自定义元数据)
-- [2. Handler](#2-handler)
+- [2. Handler 的注册](#2-handler-的注册)
   - [2.1 实现](#21-实现)
   - [2.2 注册到注册表](#22-注册到注册表)
   - [2.3 通过 Apex 注册](#23-通过-apex-注册)
-  - [2.4 Props](#24-props)
-  - [2.5 状态](#25-状态)
-- [3. 执行控制](#3-执行控制)
-  - [3.1 跳过 Handler](#31-跳过-handler)
-  - [3.2 Handler 流程控制](#32-handler-流程控制)
-  - [3.3 错误处理](#33-错误处理)
-- [4. 测试](#4-测试)
-  - [4.1 设置操作](#41-设置操作)
-  - [4.2 使用模拟数据测试](#42-使用模拟数据测试)
-- [5. API](#5-api)
-  - [5.1 Handler 接口](#51-handler-接口)
-  - [5.2 触发器上下文](#52-触发器上下文)
-- [6. 许可证](#6-许可证)
+- [3. Handler 的使用](#3-handler-的使用)
+  - [3.1 Props](#31-props)
+  - [3.2 状态](#32-状态)
+  - [3.3 检测字段变更](#33-检测字段变更)
+- [4. 执行控制](#4-执行控制)
+  - [4.1 跳过 Handler](#41-跳过-handler)
+  - [4.2 Handler 流程控制](#42-handler-流程控制)
+  - [4.3 错误处理](#43-错误处理)
+- [5. 测试](#5-测试)
+  - [5.1 设置操作](#51-设置操作)
+  - [5.2 使用模拟数据测试](#52-使用模拟数据测试)
+- [6. API](#6-api)
+  - [6.1 Handler 接口](#61-handler-接口)
+  - [6.2 触发器上下文](#62-触发器上下文)
+- [7. 许可证](#7-许可证)
 
 ## 1. 设置
 
@@ -76,7 +78,7 @@
 | Execution Order | 数字     | **必填。** 决定 Handler 的执行顺序。                                                 |
 | Is Active       | 复选框   | 指示 Handler 是否启用。                                                              |
 
-## 2. Handler
+## 2. Handler 的注册
 
 ### 2.1 实现
 
@@ -125,7 +127,9 @@ trigger AccountTrigger on Account (before update, after update) {
 
 **注意：** 你可以同时通过自定义元数据和 Apex 代码注册 Handler。默认情况下，Apex 代码注册的 Handler 优先生效。如需让自定义元数据注册的 Handler 优先，请启用上述的 `Registry Has Priority` 设置。
 
-### 2.4 Props
+## 3. Handler 的使用
+
+### 3.1 Props
 
 所有 Trigger 静态属性现在都可通过 `context` 对象访问。请始终使用 `context` 访问触发器属性，如 `context.oldList` 和 `context.newList`。
 
@@ -141,7 +145,7 @@ public class AccountTriggerHandler implements Triggers.BeforeInsert {
 }
 ```
 
-### 2.5 状态
+### 3.2 状态
 
 使用 `Triggers.states` 管理状态对象。该对象为单例，在同一事务内被所有触发器共享。状态类首次访问时会自动初始化。
 
@@ -193,9 +197,35 @@ Triggers.states.remove(CounterState.class);
 Triggers.states.clear();
 ```
 
-## 3. 执行控制
+### 3.3 检测字段变更
 
-### 3.1 跳过 Handler
+在触发器上下文中，常常需要判断新旧列表中的特定字段是否发生了变化。你可以使用 [Apex LINQ](https://github.com/apexfarm/ApexLINQ) 来简化这一过程。
+
+```java
+public class AccountTriggerHandler implements Triggers.BeforeUpdate {
+    public void beforeUpdate(Triggers.Context context) {
+        Q.Differ differ = new AccountDiffer();
+        List<Account> changedAccounts = (List<Account>) Q.of(context.newList)
+            .toDiff(differ, context.oldList);
+        if (changedAccounts.isEmpty()) {
+            return; // 未检测到相关变更。
+        }
+        // 在这里实现你的业务逻辑。
+    }
+
+    public class AccountDiffer implements Q.Differ {
+        public Boolean changed(Object fromRecord, Object toRecord) {
+            Account fromAcc = (Account) fromRecord;
+            Account toAcc = (Account) toRecord;
+            return (Double) fromAcc.AnnualRevenue != (Double) toAcc.AnnualRevenue;
+        }
+    }
+}
+```
+
+## 4. 执行控制
+
+### 4.1 跳过 Handler
 
 你可以在 Apex 代码中跳过特定 Handler：
 
@@ -217,7 +247,7 @@ Triggers.skips.clear();
 | `remove(type handlerType)`     | void     | 恢复被跳过的 Handler |
 | `clear()`                      | void     | 恢复所有 Handler     |
 
-### 3.2 Handler 流程控制
+### 4.2 Handler 流程控制
 
 ```java
 public class AccountTriggerHandler implements Triggers.BeforeInsert {
@@ -232,7 +262,7 @@ public class AccountTriggerHandler implements Triggers.BeforeInsert {
 }
 ```
 
-### 3.3 错误处理
+### 4.3 错误处理
 
 你可以通过实现专用 Handler 集中处理所有后续 Handler 的异常。例如：
 
@@ -257,9 +287,9 @@ public class ErrorTriggerHandler implements Triggers.BeforeInsert, Triggers.Afte
 }
 ```
 
-## 4. 测试
+## 5. 测试
 
-### 4.1 设置操作
+### 5.1 设置操作
 
 为测试开发的设置修改方法，以下两个方法为私有并标记为 `@TestVisible`。
 
@@ -286,7 +316,7 @@ Triggers.setRegistry(
 );
 ```
 
-### 4.2 使用模拟数据测试
+### 5.2 使用模拟数据测试
 
 以下方法为私有但标记为 `@TestVisible`，可在测试方法中使用模拟记录，无需 DML 操作即可触发 Handler。
 
@@ -308,9 +338,9 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 }
 ```
 
-## 5. API
+## 6. API
 
-### 5.1 Handler 接口
+### 6.1 Handler 接口
 
 | 接口                      | 需实现方法                                      |
 | ------------------------- | ----------------------------------------------- |
@@ -322,7 +352,7 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 | `Triggers.AfterDelete`    | `void afterDelete(Triggers.Context context);`   |
 | `Triggers.BeforeUndelete` | `void afterUndelete(Triggers.Context context);` |
 
-### 5.2 触发器上下文
+### 6.2 触发器上下文
 
 #### 属性
 
@@ -350,6 +380,6 @@ static void test_AccountTriggerHandler_BeforeUpdate {
 | `context.next()` | void     | 执行下一个 Handler                          |
 | `context.stop()` | void     | 停止执行后续 Handler，类似流程构建器的 stop |
 
-## 6. 许可证
+## 7. 许可证
 
 BSD 3-Clause License

@@ -207,17 +207,14 @@ public class AccountTriggerHandler implements Triggers.BeforeUpdate {
         Q.Differ differ = new AccountDiffer();
         List<Account> changedAccounts = (List<Account>) Q.of(context.newList)
             .diff(differ, context.oldList).toList();
-        if (changedAccounts.isEmpty()) {
-            return; // No relevant changes detected.
-        }
         // Implement your business logic here.
     }
 
     public class AccountDiffer implements Q.Differ {
-        public Boolean changed(Object fromRecord, Object toRecord) {
-            Account fromAcc = (Account) fromRecord;
-            Account toAcc = (Account) toRecord;
-            return (Double) fromAcc.AnnualRevenue != (Double) toAcc.AnnualRevenue;
+        public Boolean changed(Object arg1, Object arg2) {
+            Double revenue1 = ((Account) arg1).AnnualRevenue;
+            Double revenue2 = ((Account) arg2).AnnualRevenue;
+            return revenue1 != revenue2;
         }
     }
 }

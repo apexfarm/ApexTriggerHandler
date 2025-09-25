@@ -206,7 +206,7 @@ public class AccountTriggerHandler implements Triggers.BeforeUpdate {
     public void beforeUpdate(Triggers.Context context) {
         Q.Differ differ = new AccountDiffer();
         List<Account> changedAccounts = (List<Account>) Q.of(context.newList)
-            .toDiff(differ, context.oldList);
+            .diff(differ, context.oldList).toList();
         if (changedAccounts.isEmpty()) {
             return; // No relevant changes detected.
         }
